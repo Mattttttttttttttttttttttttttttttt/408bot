@@ -1,2 +1,2 @@
 # 408bot
-a bot for the west champ boys
+This is a bot for the west champ boys!!! WCB forever :D
