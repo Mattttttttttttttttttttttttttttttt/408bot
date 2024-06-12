@@ -1,6 +1,6 @@
 """module provides time calculation feature"""
 from datetime import time, datetime, timezone, timedelta
-import discord, os
+import discord, os, time
 from discord import app_commands
 from discord.ext import tasks, commands
 from dotenv import load_dotenv
@@ -41,6 +41,7 @@ LIST_TEST = []
 # variables
 medal: int
 users: list = []
+need_to_react : list = []
 last_vc_ping : datetime = datetime(2000, 1, 1, tzinfo=timezone.utc)
 UTC_TO_PDT: int = -7
 UTC_TO_PST: int = -8
@@ -152,7 +153,7 @@ async def react(message: discord.Message, timestamp: list, t: list = None):
         timestamp (list): the time the message was sent at
         t (list, optional): the target time for the message. Defaults to None.
     """
-    global medal
+    global medal, need_to_react
     if t is None:
         print(f"target time: idfk bruh, sent time: {timestamp[0]}")
         await message.add_reaction("💀")
@@ -163,9 +164,12 @@ async def react(message: discord.Message, timestamp: list, t: list = None):
         user_ids = [users[i][0] for i in range(len(users))]
         if timestamp[0] == t and message.author.id not in user_ids and medal < 10:
             users.append([message.author.id, timestamp[1]])
+            need_to_react.append([message, timestamp[1]])
+            time.sleep(bot.latency/1000)
             medal += 1
             copy = medal
-            await message.add_reaction(RANKING_TO_EMOJI[copy])
+            need_to_react.sort(key=second_value)
+            await need_to_react[0][0].add_reaction(RANKING_TO_EMOJI[copy])
             print(f"reacted with {RANKING_TO_EMOJI[copy]}")
             # adds the user id to a list, along with the ms
         elif timestamp[0] == t and (message.author.id in user_ids or medal >= 10):
