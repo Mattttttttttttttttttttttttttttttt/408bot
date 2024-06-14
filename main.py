@@ -4,7 +4,8 @@ from discord import app_commands
 from discord.ext import tasks, commands
 from dotenv import load_dotenv
 import discord
-from datetime import datetime, timezone, timedelta
+from datetime import timezone, timedelta
+import datetime
 
 
 load_dotenv()
@@ -44,7 +45,7 @@ LIST_TEST = []
 medal: int
 users: list = []
 need_to_react : list = []
-last_vc_ping : datetime = datetime(2000, 1, 1, tzinfo=timezone.utc)
+last_vc_ping : datetime.datetime = datetime.datetime(2000, 1, 1, tzinfo=timezone.utc)
 UTC_TO_PDT: int = -7
 UTC_TO_PST: int = -8
 EMOJI_408 = "<:408:1232116288113999953>"
@@ -191,12 +192,12 @@ async def send_leaderboard(timestamp: str) -> None:
     """
     if not users:
         await bot.get_channel(CHANNEL_408_ID).send(
-            f'''# {datetime.now(PDT).strftime("%m/%d/%Y")} leaderboard
+            f'''# {datetime.datetime.now(PDT).strftime("%m/%d/%Y")} leaderboard
 bruh not a single person did {timestamp} today''')
         print("sent empty leaderboard " + timestamp)
     else:
         users.sort(key=second_value)
-        message = f"# {datetime.now(PDT).strftime("%m/%d/%Y")} {timestamp} leaderboard"
+        message = f"# {datetime.datetime.now(PDT).strftime("%m/%d/%Y")} {timestamp} leaderboard"
         for i, [user, t] in enumerate(users, 1):
             message += f"\n{RANKING_TO_EMOJI[i]} <@{user}> {s_ms(t)}"
         await bot.get_channel(CHANNEL_408_ID).send(message)
@@ -295,7 +296,7 @@ async def send_408() -> None:
     users = []
     await bot.get_channel(CHANNEL_408_ID).send(ROLE_408)
     await bot.get_channel(CHANNEL_408_ID).send("get ready guys")
-    print("sent 408 ping at " + datetime.now(PDT).strftime('%m-%d %H:%M:%S'))
+    print("sent 408 ping at " + datetime.datetime.now(PDT).strftime('%m-%d %H:%M:%S'))
 
 
 # pings @408 ping at 4:08pm CST
@@ -309,7 +310,7 @@ async def send_hrishu() -> None:
     users = []
     await bot.get_channel(CHANNEL_408_ID).send("<@1124542462682218600>")
     await bot.get_channel(CHANNEL_408_ID).send("get ready hrishu")
-    print("sent hrishu ping at " + datetime.now(PDT).strftime('%m-%d %H:%M:%S'))
+    print("sent hrishu ping at " + datetime.datetime.now(PDT).strftime('%m-%d %H:%M:%S'))
 
 
 # pings @408 ping at 4:08pm CST
@@ -323,7 +324,7 @@ async def send_625() -> None:
     users = []
     await bot.get_channel(CHANNEL_408_ID).send(ROLE_625)
     await bot.get_channel(CHANNEL_408_ID).send("get ready guys")
-    print("sent 625 ping at " + datetime.now(PDT).strftime('%m-%d %H:%M:%S'))
+    print("sent 625 ping at " + datetime.datetime.now(PDT).strftime('%m-%d %H:%M:%S'))
 
 
 @bot.event
@@ -355,7 +356,7 @@ async def on_message(message: discord.Message) -> None:
 async def on_ready() -> None:
     """initiates the bot
     """
-    print(f"{bot.user} is now online!\ntime: " + datetime.now(PDT).strftime('%m-%d %H:%M:%S'))
+    print(f"{bot.user} is now online!\ntime: " + datetime.datetime.now(PDT).strftime('%m-%d %H:%M:%S'))
     send_408.start() if not send_408.is_running() else None
     print("started 408")
     send_hrishu.start() if not send_hrishu.is_running() else None
