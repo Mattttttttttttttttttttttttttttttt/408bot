@@ -1,9 +1,11 @@
-"""module provides time calculation feature"""
-from datetime import time, datetime, timezone, timedelta
-import discord, os, time
+import os
+from time import sleep
 from discord import app_commands
 from discord.ext import tasks, commands
 from dotenv import load_dotenv
+import discord
+from datetime import datetime, timezone, timedelta
+
 
 load_dotenv()
 
@@ -20,15 +22,15 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 PDT = timezone(timedelta(hours=-7))
 PST = timezone(timedelta(hours=-8))
 CST = timezone(timedelta(hours=-6))
-PDT_408 = time(16, 7, 0, tzinfo=PDT)
-PDT_409 = time(16, 9, 0, tzinfo=PDT)
-PST_408 = time(16, 7, 0, tzinfo=PST)
-PST_409 = time(16, 9, 0, tzinfo=PST)
-CST_408 = time(16, 7, 0, tzinfo=CST)
-CST_409 = time(16, 9, 0, tzinfo=CST)
-PDT_625 = time(18, 24, 0, tzinfo=PDT)
-PDT_626 = time(18, 26, 0, tzinfo=PDT)
-TEST_TIME = time(21, 11, 0, tzinfo=PDT)
+PDT_408 = datetime.time(16, 7, 0, tzinfo=PDT)
+PDT_409 = datetime.time(16, 9, 0, tzinfo=PDT)
+PST_408 = datetime.time(16, 7, 0, tzinfo=PST)
+PST_409 = datetime.time(16, 9, 0, tzinfo=PST)
+CST_408 = datetime.time(16, 7, 0, tzinfo=CST)
+CST_409 = datetime.time(16, 9, 0, tzinfo=CST)
+PDT_625 = datetime.time(18, 24, 0, tzinfo=PDT)
+PDT_626 = datetime.time(18, 26, 0, tzinfo=PDT)
+TEST_TIME = datetime.time(21, 11, 0, tzinfo=PDT)
 CHANNEL_408_ID = 1231756043810508822
 TEST_SERVER_ID = 1240098098513055776
 WCB_ID = 1204222579498557440
@@ -165,7 +167,7 @@ async def react(message: discord.Message, timestamp: list, t: list = None):
         if timestamp[0] == t and message.author.id not in user_ids and medal < 10:
             users.append([message.author.id, timestamp[1]])
             need_to_react.append([message, timestamp[1]])
-            time.sleep(bot.latency/1000)
+            sleep(bot.latency/1000)
             medal += 1
             copy = medal
             need_to_react.sort(key=second_value)
