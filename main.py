@@ -172,7 +172,7 @@ async def react(message: discord.Message, timestamp: list, t: list = None):
             medal += 1
             copy = medal
             need_to_react.sort(key=second_value)
-            await need_to_react[0][0].add_reaction(RANKING_TO_EMOJI[copy])
+            await need_to_react.pop(0)[0].add_reaction(RANKING_TO_EMOJI[copy])
             print(f"reacted with {RANKING_TO_EMOJI[copy]}")
             # adds the user id to a list, along with the ms
         elif timestamp[0] == t and (message.author.id in user_ids or medal >= 10):
