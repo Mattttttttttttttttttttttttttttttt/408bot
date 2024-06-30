@@ -1,11 +1,12 @@
 import os
 from time import sleep
+from datetime import timezone, timedelta
+import datetime
+import shelve
 from discord import app_commands
 from discord.ext import tasks, commands
 from dotenv import load_dotenv
 import discord
-from datetime import timezone, timedelta
-import datetime
 
 
 load_dotenv()
@@ -44,8 +45,10 @@ LIST_TEST = []
 # variables
 medal: int
 users: list = []
-need_to_react : list = []
-last_vc_ping : datetime.datetime = datetime.datetime(2000, 1, 1, tzinfo=timezone.utc)
+need_to_react: list = []
+records_408: dict = {} #user id: [ms, lb id]
+records_625: dict = {}
+last_vc_ping: datetime.datetime = datetime.datetime(2000, 1, 1, tzinfo=timezone.utc)
 UTC_TO_PDT: int = -7
 UTC_TO_PST: int = -8
 EMOJI_408 = "<:408:1232116288113999953>"
@@ -148,6 +151,24 @@ def second_value(val: list) -> int:
     return val[1]
 
 
+async def update(author: int, speed: list, time: str) -> None:
+    """updates the record list
+
+    Args:
+        author (discord.User): the person who got the time
+        speed (list): the time they achieved and the message id
+        time (str): the time of the day
+    """
+    if time == "408":
+        global records_408
+        if author in list(records_408.keys()) or len(records_408) < 10:
+            records_408[author] = speed
+    elif time == "625":
+        global records_625
+        if author in list(records_625.keys()) or len(records_625) < 10:
+            records_625[author] = speed
+
+
 async def react(message: discord.Message, timestamp: list, t: list = None):
     """react to the given message with different emojis
 
@@ -166,15 +187,15 @@ async def react(message: discord.Message, timestamp: list, t: list = None):
         t = list_time(t)
         user_ids = [users[i][0] for i in range(len(users))]
         if timestamp[0] == t and message.author.id not in user_ids and medal < 10:
-            users.append([message.author.id, timestamp[1]])
             need_to_react.append([message, timestamp[1]])
-            sleep(bot.latency/1000)
+            sleep(min(bot.latency, 0.5))
             medal += 1
             copy = medal
             need_to_react.sort(key=second_value)
             await need_to_react.pop(0)[0].add_reaction(RANKING_TO_EMOJI[copy])
             print(f"reacted with {RANKING_TO_EMOJI[copy]}")
             # adds the user id to a list, along with the ms
+            users.append([message.author.id, timestamp[1]])
         elif timestamp[0] == t and (message.author.id in user_ids or medal >= 10):
             await message.add_reaction("🙂")
         elif timestamp[0] == plus or timestamp[0] == minus:
@@ -198,20 +219,60 @@ bruh not a single person did {timestamp} today''')
     else:
         users.sort(key=second_value)
         message = f"# {datetime.datetime.now(PDT).strftime("%m/%d/%Y")} {timestamp} leaderboard"
-        for i, [user, t] in enumerate(users, 1):
+        for i, [user, t] in enumerate(users, 1): #user id and ms
             message += f"\n{RANKING_TO_EMOJI[i]} <@{user}> {s_ms(t)}"
-        await bot.get_channel(CHANNEL_408_ID).send(message)
+        msg = await bot.get_channel(CHANNEL_408_ID).send(message)
         print("sent leaderboard " + timestamp)
+        for i, [user, t] in enumerate(users, 1):
+            await update(user, [t, msg.id], timestamp) #updates record
+        update_file() #updates the file
+
+
+async def update_file() -> None:
+    """writes records_408 and records_625 to a file
+    """
+    file = shelve.open("data")
+    file[408] = records_408
+    file[625] = records_625
+    file.close()
+
+def get_records(t: str) -> discord.Embed:
+    """returns the records of the server
+
+    Args:
+        t (str): 408 or 625
+
+    Returns:
+        discord.Embed: the embed to return
+    """
+    if t == "408" and records_408:
+        record = "\n".join([f"{i}. {s_ms(val[0])}: {bot.get_user(key).mention()}" #e.g. 1. 0ms: @matt
+            for i, [key, val] in enumerate(list(records_408.items()))])
+            #key = user id, val = [time in ms, id to leaderboard sent]
+    elif t == "408" and records_625: #625
+        record = "\n".join([f"{i}. {s_ms(val[0])}: {bot.get_user(key).mention()}" #see above
+            for i, [key, val] in enumerate(list(records_625.items()))])
+    else:
+        record = "no data yet :)"
+    return discord.Embed(
+        title="Leaderboard:",
+        description=record,
+        color=discord.Color(65535)) #00ffff
+
 
 # BOT COMMANDS
-@bot.tree.command(name="getdata", description="get the data for this server")
-async def getdata(inter: discord.Interaction):
-    """TO BE IMPLEMENTED: get the data for the server in a string
+@bot.tree.command(name="leaderboard",
+    description="lookie who's fastest at waiting until a certain time to send an emoji")
+@app_commands.choices(lb=[
+    app_commands.Choice(name="408", value="408"),
+    app_commands.Choice(name="625", value="625")])
+async def leaderboard(inter: discord.Interaction, lb: str) -> None:
+    """prints the leaderboard
 
     Args:
         inter (discord.Interaction): default parameter
     """
-    await inter.response.send_message("to be implemented, good catch!", ephemeral=True)
+    await inter.response.send_message(embed=get_records(lb))
 
 
 @bot.tree.command(name="ping", description="bot's delay")
@@ -222,23 +283,6 @@ async def ping(inter: discord.Interaction) -> None:
         inter (discord.Interaction): default parameter
     """
     await inter.response.send_message(f"408 bot has a delay of {round(bot.latency * 1000)}ms")
-
-
-@bot.tree.command(name="vc", description="invites other people to vc with you")
-async def vc(inter: discord.Interaction) -> None:
-    """sends @vc ping in the given channel
-
-    Args:
-        inter (discord.Interaction): default parameter
-    """
-    global last_vc_ping
-    if (inter.created_at - last_vc_ping).total_seconds() >= 300:
-        await inter.response.send_message(VC_PING)
-        last_vc_ping = inter.created_at
-    else:
-        timestamp = int(last_vc_ping.timestamp())
-        await inter.response.send_message(f'''last vc ping was pinged <t:{timestamp}:R>
-you can ping vc ping again <t:{timestamp+300}:R>''', ephemeral=True)
 
 
 @bot.tree.command(name="sync", description="Owner only")
@@ -338,7 +382,7 @@ async def on_message(message: discord.Message) -> None:
         if message.content == EMOJI_408 or message.content == EMOJI_625:
             text = EMOJI_TO_TEXT[message.content]
             t = message.created_at
-            timestamp = [f"{pdt_hm(str(t.hour) + ":" + valid_num(t.minute))}",
+            timestamp = [pdt_hm(str(t.hour) + ":" + valid_num(t.minute)),
                          t.second * 1000 + round(t.microsecond / 1000)]
             print(f"a {text} emoji was sent at {timestamp[0]}:{s_ms(timestamp[1])}")
             if pdt_h(t.hour) == "15" and message.content == EMOJI_408:
@@ -357,23 +401,33 @@ async def on_ready() -> None:
     """initiates the bot
     """
     print(f"{bot.user} is now online!\ntime: " + datetime.datetime.now(PDT).strftime('%m-%d %H:%M:%S'))
-    send_408.start() if not send_408.is_running() else None
-    print("started 408")
-    send_hrishu.start() if not send_hrishu.is_running() else None
-    print("started hrishu")
-    send_625.start() if not send_625.is_running() else None
-    print("started 625")
-    leaderboard_308.start() if not leaderboard_308.is_running() else None
-    print("started leaderboard hrishu 408")
-    leaderboard_408.start() if not leaderboard_408.is_running() else None
-    print("started leaderboard 408")
-    leaderboard_625.start() if not leaderboard_625.is_running() else None
-    print("started leaderboard 625")
+    if not send_408.is_running():
+        send_408.start()
+        print("started 408")
+    if not send_hrishu.is_running():
+        send_hrishu.start()
+        print("started hrishu")
+    if not send_625.is_running():
+        send_625.start()
+        print("started 625")
+    if not leaderboard_308.is_running():
+        leaderboard_308.start()
+        print("started leaderboard hrishu 408")
+    if not leaderboard_408.is_running():
+        leaderboard_408.start()
+        print("started leaderboard 408")
+    if not leaderboard_625.is_running():
+        leaderboard_625.start()
+        print("started leaderboard 625")
     synced = await bot.tree.sync(guild=bot.get_guild(WCB_ID))
     print(f"synced command {[synced[i].name for i in range(len(synced))]}")
-#        if not send.is_running():
-#            send.start()
-#            print("started test")
+    file = shelve.open("data")
+    if 408 in list(file.keys()):
+        global records_408
+        records_408 = file[408]
+    elif 625 in list(file.keys()):
+        global records_625
+        records_625 = file[625]
 
 
 bot.run(TOKEN)
