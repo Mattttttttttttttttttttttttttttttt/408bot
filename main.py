@@ -505,7 +505,7 @@ async def on_ready() -> None:
     if "408" in list(file.keys()):
         global records_408
         records_408 = file["408"]
-    elif "625" in list(file.keys()):
+    if "625" in list(file.keys()):
         global records_625
         records_625 = file["625"]
     CHANNEL_408 = bot.get_channel(CHANNEL_408_ID)
