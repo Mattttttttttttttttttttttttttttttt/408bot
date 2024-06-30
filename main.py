@@ -34,7 +34,7 @@ CST_409 = datetime.time(16, 9, 0, tzinfo=CST)
 PDT_625 = datetime.time(18, 24, 0, tzinfo=PDT)
 PDT_626 = datetime.time(18, 26, 0, tzinfo=PDT)
 CHANNEL_408_ID = 1231756043810508822
-CHANNEL_408: discord.TextChannel = bot.get_channel(CHANNEL_408_ID)
+CHANNEL_408: discord.TextChannel
 TEST_SERVER_ID = 1240098098513055776
 WCB_ID = 1204222579498557440
 DEVELOPER = 1104220935973777459
@@ -241,7 +241,7 @@ async def update_file() -> None:
     file[625] = records_625
     file.close()
 
-def get_records(t: str) -> discord.Embed:
+async def get_records(t: str) -> discord.Embed:
     """returns the records of the server
 
     Args:
@@ -252,16 +252,23 @@ def get_records(t: str) -> discord.Embed:
     """
     if t == "408" and records_408:
         records_408.sort(key=second_value)
-        record = "\n".join([f"{i}. [{s_ms(val[0])}]"\
-                            f"({CHANNEL_408.fetch_message(a)}): "\
-                            f"{bot.get_user(key).mention()}" #e.g. 1. 0ms: @matt
-                            for i, [key, val, a] in enumerate(records_408)])
-            #key = user id, val = [time in ms, id to leaderboard sent]
-    elif t == "625" and records_625: #625
-        record = "\n".join([f"{i}. [{s_ms(val[0])}]"\
-                            f"({CHANNEL_408.fetch_message(a)}): "\
-                            f"{bot.get_user(key).mention()}" #see above
-                            for i, [key, val, a] in enumerate(records_625)])
+        record = []
+        for i, [key, val, msg] in enumerate(records_408):
+            msg = await CHANNEL_408.fetch_message(msg)
+            msg = f"https://discord.com/channels/{WCB_ID}/{CHANNEL_408_ID}/{msg.id}"
+            record.append(f"{i}. [{s_ms(val)}]({msg}): <@{key}>")
+            #e.g. 1. 0ms: @matt
+        record = "\n".join(record)
+            #key = user id, val = time in ms, id = id to leaderboard sent
+    elif t == "625" and records_625:
+        records_625.sort(key=second_value)
+        record = []
+        for i, [key, val, msg] in enumerate(records_625):
+            msg = await CHANNEL_408.fetch_message(msg)
+            msg = f"https://discord.com/channels/{WCB_ID}/{CHANNEL_408_ID}/{msg.id}"
+            record.append(f"{i}. [{s_ms(val)}]({msg}): <@{key}>")
+            #e.g. 1. 0ms: @matt
+        record = "\n".join(record)
     else:
         record = "no data yet :)"
     return discord.Embed(
@@ -279,11 +286,12 @@ async def getdata(inter: discord.Interaction) -> None:
     Args:
         inter (discord.Interaction): default parameter
     """
-    await inter.response.send_message(
-        f'''408
-{"\n".join([f"{id} {t[0]} {t[1]}" for id, t in list((records_408.items()))])}
+    await inter.response.defer(ephemeral=True)
+    await inter.edit_original_response(
+        content=f'''408
+{"\n".join([f"a{id} {t} {msg}" for id, t, msg in records_408])}
 625
-{"\n".join([f"{id} {t[0]} {t[1]}" for id, t in list((records_625.items()))])}''', ephemeral=True)
+{"\n".join([f"a{id} {t} {msg}" for id, t, msg in records_625])}''')
     # outputs
     # 408
     # (user id) (time in ms) (id to leaderboard message)
@@ -301,21 +309,24 @@ async def feeddata(inter: discord.Interaction, data: str) -> None:
         inter (discord.Interaction): default parameter
         data (str): the data to be processed
     """
+    await inter.response.defer(ephemeral=True)
     global records_408, records_625
-    data = re.compile(r"408\n(.*)\n625\n(.*)").search(data)
-    data_408 = re.compile(r"(\d+) (\d+) (\d+)\n").findall(data.group(1))
-    data_625 = re.compile(r"(\d+) (\d+) (\d+)\n").findall(data.group(2))
+    records_408 = []
+    records_625 = []
+    data = re.compile(r"408 (.*) 625 (.*)").search(data)
+    data_408 = re.compile(r"a(\d+) (\d+) (\d+)").findall(data.group(1))
+    data_625 = re.compile(r"a(\d+) (\d+) (\d+)").findall(data.group(2))
     for i in data_408:
-        records_408.append([i[0], i[1], i[2]])
+        records_408.append([int(i[0]), int(i[1]), int(i[2])])
     for i in data_625:
-        records_625.append([i[0], i[1], i[2]])
+        records_625.append([int(i[0]), int(i[1]), int(i[2])])
     records_408.sort(key=second_value)
     records_625.sort(key=second_value)
     file = shelve.open("data")
     file[408] = records_408
     file[625] = records_625
     file.close()
-    await inter.response.send_message(f"records_408: {records_408}\nrecords_625: {records_625}", ephemeral=True)
+    await inter.edit_original_response(content=f"records_408: {records_408}\nrecords_625: {records_625}")
 
 
 @bot.tree.command(name="leaderboard",
@@ -329,7 +340,8 @@ async def leaderboard(inter: discord.Interaction, lb: str) -> None:
     Args:
         inter (discord.Interaction): default parameter
     """
-    await inter.response.send_message(embed=get_records(lb))
+    await inter.response.defer()
+    await inter.edit_original_response(embed=await get_records(lb))
 
 
 @bot.tree.command(name="ping", description="bot's delay")
@@ -339,10 +351,12 @@ async def ping(inter: discord.Interaction) -> None:
     Args:
         inter (discord.Interaction): default parameter
     """
-    await inter.response.send_message(f"408 bot has a delay of {round(bot.latency * 1000)}ms")
+    await inter.response.defer()
+    await inter.edit_original_response(content=f"408 bot has a delay of {round(bot.latency * 1000)}ms")
 
 
 @bot.tree.command(name="sync", description="Owner only")
+@app_commands.default_permissions()
 @app_commands.guilds(WCB_ID)
 async def sync(inter: discord.Interaction) -> None:
     """sync all the other functions
@@ -350,13 +364,13 @@ async def sync(inter: discord.Interaction) -> None:
     Args:
         interaction (discord.Interaction): default parameter
     """
+    await inter.response.defer(ephemeral=True)
     if inter.user.id == DEVELOPER:
         synced = await bot.tree.sync()
-        await inter.response.send_message(
-            f"synced command {[synced[i].name for i in range(len(synced))]}",
-                                                ephemeral=True)
+        await inter.edit_original_response(
+            content=f"synced command {[synced[i].name for i in range(len(synced))]}")
     else:
-        await inter.response.send_message("hmm i dont think you are matt bro", ephemeral=True)
+        await inter.edit_original_response(content="hmm i dont think you are matt bro")
 
 
 # BOT EVENTS
@@ -457,6 +471,7 @@ async def on_message(message: discord.Message) -> None:
 async def on_ready() -> None:
     """initiates the bot
     """
+    global CHANNEL_408
     print(f"{bot.user} is now online!\ntime: " + datetime.datetime.now(PDT).strftime('%m-%d %H:%M:%S'))
     if not send_408.is_running():
         send_408.start()
@@ -485,6 +500,7 @@ async def on_ready() -> None:
     elif 625 in list(file.keys()):
         global records_625
         records_625 = file[625]
+    CHANNEL_408 = bot.get_channel(CHANNEL_408_ID)
 
 
 bot.run(TOKEN)
