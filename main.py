@@ -288,6 +288,8 @@ async def feeddata(inter: discord.Interaction, data: str) -> None:
         records_408.append([i[0], i[1], i[2]])
     for i in data_625:
         records_625.append([i[0], i[1], i[2]])
+    records_408.sort(key=second_value)
+    records_625.sort(key=second_value)
     file = shelve.open("data")
     file[408] = records_408
     file[625] = records_625
