@@ -2,6 +2,7 @@ import os
 from time import sleep
 from datetime import timezone, timedelta
 import datetime
+import re
 import shelve
 from discord import app_commands
 from discord.ext import tasks, commands
@@ -32,7 +33,6 @@ CST_408 = datetime.time(16, 7, 0, tzinfo=CST)
 CST_409 = datetime.time(16, 9, 0, tzinfo=CST)
 PDT_625 = datetime.time(18, 24, 0, tzinfo=PDT)
 PDT_626 = datetime.time(18, 26, 0, tzinfo=PDT)
-TEST_TIME = datetime.time(21, 11, 0, tzinfo=PDT)
 CHANNEL_408_ID = 1231756043810508822
 TEST_SERVER_ID = 1240098098513055776
 WCB_ID = 1204222579498557440
@@ -40,7 +40,6 @@ DEVELOPER = 1104220935973777459
 LIST_408 = [16, 8]
 LIST_HRISHU = [15, 8]
 LIST_625 = [18, 25]
-LIST_TEST = []
 
 # variables
 medal: int
@@ -85,6 +84,7 @@ def s_ms(t: int) -> str:
         str: string describing the time length
     """
     return str(t/1000) + "s" if t >= 1000 else str(t) + "ms"
+    # either ~ 1s or 500ms
 
 
 def valid_num(num: int) -> str:
@@ -97,10 +97,11 @@ def valid_num(num: int) -> str:
         str: the resultant string
     """
     return str(num) if num >= 10 else "0" + str(num)
+    # either ~ 02 or 10
 
 
 def pdt_h(hour: str) -> str:
-    """returns a UTC hour in PDT
+    """returns a UTC hour in PDT, both 2-digit numbers
 
     Args:
         hour (str): hour in UTC
@@ -112,10 +113,11 @@ def pdt_h(hour: str) -> str:
         return str(valid_num(int(hour) + UTC_TO_PDT))
     else:
         return str(valid_num(int(hour) + UTC_TO_PDT + 24))
+    # it's valid_num-ed
 
 
 def pdt_hm(t: str) -> str:
-    """returns a UTC time in PDT
+    """returns a UTC time in PDT, both 2-digit numbers
 
     Args:
         t (str): UTC time formatted in %m:%s
@@ -152,12 +154,12 @@ def second_value(val: list) -> int:
 
 
 async def update(author: int, speed: list, time: str) -> None:
-    """updates the record list
+    """updates the records list
 
     Args:
-        author (discord.User): the person who got the time
-        speed (list): the time they achieved and the message id
-        time (str): the time of the day
+        author (int): the id of the person who got the time
+        speed (list): a list of the time they achieved, and the message id
+        time (str): the time of the day (408 or 625)
     """
     if time == "408":
         global records_408
@@ -261,6 +263,30 @@ def get_records(t: str) -> discord.Embed:
 
 
 # BOT COMMANDS
+@bot.tree.command(name="feeddata", description="DANGEROUS: overrite the data of this server")
+@app_commands.default_permissions()
+async def feeddata(inter: discord.Interaction, data: str) -> None:
+    """feed in the data for the server in a string
+
+    Args:
+        inter (discord.Interaction): default parameter
+        data (str): the data to be processed
+    """
+    global records_408, records_625
+    data = re.compile(r"408\s(.)\s625\s(.)").search(data)
+    data_408 = re.compile(r"(\d+) (\d+ \w+) (\d+)\n").findall(data.group(1))
+    data_625 = re.compile(r"(\d+) (\d+ \w+) (\d+)\n").findall(data.group(2))
+    for i in data_408:
+        records_408[i[0]] = [i[1], i[2]]
+    for i in data_625:
+        records_625[i[0]] = [i[1], i[2]]
+    file = shelve.open("data")
+    file[408] = records_408
+    file[625] = records_625
+    file.close()
+    await inter.response.send_message(f"records_408: {records_408}\nrecords_625: {records_625}", ephemeral=True)
+
+
 @bot.tree.command(name="leaderboard",
     description="lookie who's fastest at waiting until a certain time to send an emoji")
 @app_commands.choices(lb=[
