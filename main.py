@@ -271,6 +271,27 @@ def get_records(t: str) -> discord.Embed:
 
 
 # BOT COMMANDS
+@bot.tree.command(name="getdata", description="get the data of this server")
+@app_commands.default_permissions()
+async def getdata(inter: discord.Interaction) -> None:
+    """get the data of the server in a string
+
+    Args:
+        inter (discord.Interaction): default parameter
+    """
+    await inter.response.send_message(
+        f'''408
+{"\n".join([f"{id} {t[0]} {t[1]}" for id, t in list((records_408.items()))])}
+625
+{"\n".join([f"{id} {t[0]} {t[1]}" for id, t in list((records_625.items()))])}''', ephemeral=True)
+    # outputs
+    # 408
+    # (user id) (time in ms) (id to leaderboard message)
+    # ...
+    # 625
+    # ...
+
+
 @bot.tree.command(name="feeddata", description="DANGEROUS: overrite the data of this server")
 @app_commands.default_permissions()
 async def feeddata(inter: discord.Interaction, data: str) -> None:
@@ -281,7 +302,7 @@ async def feeddata(inter: discord.Interaction, data: str) -> None:
         data (str): the data to be processed
     """
     global records_408, records_625
-    data = re.compile(r"408\s(.)\s625\s(.)").search(data)
+    data = re.compile(r"408\n(.*)\n625\n(.*)").search(data)
     data_408 = re.compile(r"(\d+) (\d+) (\d+)\n").findall(data.group(1))
     data_625 = re.compile(r"(\d+) (\d+) (\d+)\n").findall(data.group(2))
     for i in data_408:
