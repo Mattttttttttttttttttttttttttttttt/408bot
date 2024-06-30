@@ -34,6 +34,7 @@ CST_409 = datetime.time(16, 9, 0, tzinfo=CST)
 PDT_625 = datetime.time(18, 24, 0, tzinfo=PDT)
 PDT_626 = datetime.time(18, 26, 0, tzinfo=PDT)
 CHANNEL_408_ID = 1231756043810508822
+CHANNEL_408: discord.TextChannel = bot.get_channel(CHANNEL_408_ID)
 TEST_SERVER_ID = 1240098098513055776
 WCB_ID = 1204222579498557440
 DEVELOPER = 1104220935973777459
@@ -45,8 +46,8 @@ LIST_625 = [18, 25]
 medal: int
 users: list = []
 need_to_react: list = []
-records_408: dict = {} #user id: [ms, lb id]
-records_625: dict = {}
+records_408: list = [] #one element = [user id, ms, lb id]
+records_625: list = []
 last_vc_ping: datetime.datetime = datetime.datetime(2000, 1, 1, tzinfo=timezone.utc)
 UTC_TO_PDT: int = -7
 UTC_TO_PST: int = -8
@@ -158,17 +159,19 @@ async def update(author: int, speed: list, time: str) -> None:
 
     Args:
         author (int): the id of the person who got the time
-        speed (list): a list of the time they achieved, and the message id
+        speed (list): a list of the time they achieved in ms, and the message id
         time (str): the time of the day (408 or 625)
     """
     if time == "408":
         global records_408
-        if author in list(records_408.keys()) or len(records_408) < 10:
-            records_408[author] = speed
+        records_408.sort(key=second_value)
+        if speed[0] <= records_408[-1][1] or len(records_408) < 10:
+            records_408.append([author, speed[0], speed[1]])
     elif time == "625":
         global records_625
-        if author in list(records_625.keys()) or len(records_625) < 10:
-            records_625[author] = speed
+        records_625.sort(key=second_value)
+        if speed[0] <= records_625[-1][1] or len(records_625) < 10:
+            records_625.append([author, speed[0], speed[1]])
 
 
 async def react(message: discord.Message, timestamp: list, t: list = None):
@@ -214,7 +217,7 @@ async def send_leaderboard(timestamp: str) -> None:
         timestamp (str): a timestamp indicating which leaderboard to send
     """
     if not users:
-        await bot.get_channel(CHANNEL_408_ID).send(
+        await CHANNEL_408.send(
             f'''# {datetime.datetime.now(PDT).strftime("%m/%d/%Y")} leaderboard
 bruh not a single person did {timestamp} today''')
         print("sent empty leaderboard " + timestamp)
@@ -223,7 +226,7 @@ bruh not a single person did {timestamp} today''')
         message = f"# {datetime.datetime.now(PDT).strftime("%m/%d/%Y")} {timestamp} leaderboard"
         for i, [user, t] in enumerate(users, 1): #user id and ms
             message += f"\n{RANKING_TO_EMOJI[i]} <@{user}> {s_ms(t)}"
-        msg = await bot.get_channel(CHANNEL_408_ID).send(message)
+        msg = await CHANNEL_408.send(message)
         print("sent leaderboard " + timestamp)
         for i, [user, t] in enumerate(users, 1):
             await update(user, [t, msg.id], timestamp) #updates record
@@ -248,12 +251,17 @@ def get_records(t: str) -> discord.Embed:
         discord.Embed: the embed to return
     """
     if t == "408" and records_408:
-        record = "\n".join([f"{i}. {s_ms(val[0])}: {bot.get_user(key).mention()}" #e.g. 1. 0ms: @matt
-            for i, [key, val] in enumerate(list(records_408.items()))])
+        records_408.sort(key=second_value)
+        record = "\n".join([f"{i}. [{s_ms(val[0])}]"\
+                            f"({CHANNEL_408.fetch_message(a)}): "\
+                            f"{bot.get_user(key).mention()}" #e.g. 1. 0ms: @matt
+                            for i, [key, val, a] in enumerate(records_408)])
             #key = user id, val = [time in ms, id to leaderboard sent]
-    elif t == "408" and records_625: #625
-        record = "\n".join([f"{i}. {s_ms(val[0])}: {bot.get_user(key).mention()}" #see above
-            for i, [key, val] in enumerate(list(records_625.items()))])
+    elif t == "625" and records_625: #625
+        record = "\n".join([f"{i}. [{s_ms(val[0])}]"\
+                            f"({CHANNEL_408.fetch_message(a)}): "\
+                            f"{bot.get_user(key).mention()}" #see above
+                            for i, [key, val, a] in enumerate(records_625)])
     else:
         record = "no data yet :)"
     return discord.Embed(
@@ -274,12 +282,12 @@ async def feeddata(inter: discord.Interaction, data: str) -> None:
     """
     global records_408, records_625
     data = re.compile(r"408\s(.)\s625\s(.)").search(data)
-    data_408 = re.compile(r"(\d+) (\d+ \w+) (\d+)\n").findall(data.group(1))
-    data_625 = re.compile(r"(\d+) (\d+ \w+) (\d+)\n").findall(data.group(2))
+    data_408 = re.compile(r"(\d+) (\d+) (\d+)\n").findall(data.group(1))
+    data_625 = re.compile(r"(\d+) (\d+) (\d+)\n").findall(data.group(2))
     for i in data_408:
-        records_408[i[0]] = [i[1], i[2]]
+        records_408.append([i[0], i[1], i[2]])
     for i in data_625:
-        records_625[i[0]] = [i[1], i[2]]
+        records_625.append([i[0], i[1], i[2]])
     file = shelve.open("data")
     file[408] = records_408
     file[625] = records_625
@@ -364,8 +372,8 @@ async def send_408() -> None:
     await bot.wait_until_ready()
     medal = 0
     users = []
-    await bot.get_channel(CHANNEL_408_ID).send(ROLE_408)
-    await bot.get_channel(CHANNEL_408_ID).send("get ready guys")
+    await CHANNEL_408.send(ROLE_408)
+    await CHANNEL_408.send("get ready guys")
     print("sent 408 ping at " + datetime.datetime.now(PDT).strftime('%m-%d %H:%M:%S'))
 
 
@@ -378,8 +386,8 @@ async def send_hrishu() -> None:
     global medal, users
     medal = 0
     users = []
-    await bot.get_channel(CHANNEL_408_ID).send("<@1124542462682218600>")
-    await bot.get_channel(CHANNEL_408_ID).send("get ready hrishu")
+    await CHANNEL_408.send("<@1124542462682218600>")
+    await CHANNEL_408.send("get ready hrishu")
     print("sent hrishu ping at " + datetime.datetime.now(PDT).strftime('%m-%d %H:%M:%S'))
 
 
@@ -392,8 +400,8 @@ async def send_625() -> None:
     global medal, users
     medal = 0
     users = []
-    await bot.get_channel(CHANNEL_408_ID).send(ROLE_625)
-    await bot.get_channel(CHANNEL_408_ID).send("get ready guys")
+    await CHANNEL_408.send(ROLE_625)
+    await CHANNEL_408.send("get ready guys")
     print("sent 625 ping at " + datetime.datetime.now(PDT).strftime('%m-%d %H:%M:%S'))
 
 
