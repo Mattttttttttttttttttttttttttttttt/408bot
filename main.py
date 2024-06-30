@@ -154,32 +154,12 @@ def second_value(val: list) -> int:
     return val[1]
 
 
-async def update(author: int, speed: list, time: str) -> None:
-    """updates the records list
-
-    Args:
-        author (int): the id of the person who got the time
-        speed (list): a list of the time they achieved in ms, and the message id
-        time (str): the time of the day (408 or 625)
-    """
-    if time == "408":
-        global records_408
-        records_408.sort(key=second_value)
-        if speed[0] <= records_408[-1][1] or len(records_408) < 10:
-            records_408.append([author, speed[0], speed[1]])
-    elif time == "625":
-        global records_625
-        records_625.sort(key=second_value)
-        if speed[0] <= records_625[-1][1] or len(records_625) < 10:
-            records_625.append([author, speed[0], speed[1]])
-
-
 async def react(message: discord.Message, timestamp: list, t: list = None):
     """react to the given message with different emojis
 
     Args:
         message (discord.Message): the message to react to
-        timestamp (list): the time the message was sent at
+        timestamp (list): the time the message was sent at, ["04:08", t (in ms)]
         t (list, optional): the target time for the message. Defaults to None.
     """
     global medal, need_to_react
@@ -210,12 +190,14 @@ async def react(message: discord.Message, timestamp: list, t: list = None):
             await message.add_reaction("💀")
 
 
-async def send_leaderboard(timestamp: str) -> None:
+async def send_leaderboard(timestamp: str, hrishu: bool) -> None:
     """sends a specific leaderboard to #408
 
     Args:
-        timestamp (str): a timestamp indicating which leaderboard to send
+        timestamp (str): a timestamp indicating which leaderboard to send (308, 408, 625)
+        hrishu (bool): whether it's 308, which doesn't not have data leaderboard
     """
+    # users = [[user id, time in ms], ...]
     if not users:
         await CHANNEL_408.send(
             f'''# {datetime.datetime.now(PDT).strftime("%m/%d/%Y")} leaderboard
@@ -228,9 +210,34 @@ bruh not a single person did {timestamp} today''')
             message += f"\n{RANKING_TO_EMOJI[i]} <@{user}> {s_ms(t)}"
         msg = await CHANNEL_408.send(message)
         print("sent leaderboard " + timestamp)
-        for i, [user, t] in enumerate(users, 1):
-            await update(user, [t, msg.id], timestamp) #updates record
-        update_file() #updates the file
+        if hrishu:
+            for i, [user, t] in enumerate(users, 1):
+                await update(user, [t, msg.id], timestamp) #updates record
+            await update_file() #updates the file
+
+
+async def update(author: int, speed: list, time: str) -> None:
+    """updates the records list
+
+    Args:
+        author (int): the id of the person who got the time
+        speed (list): a list of the time they achieved in ms, and the message id
+        time (str): the time of the day (408 or 625)
+    """
+    if time == "408":
+        global records_408
+        records_408.sort(key=second_value)
+        if speed[0] <= records_408[-1][1]:
+            records_408[-1] = [author, speed[0], speed[1]]
+        elif len(records_408) < 10:
+            records_408.append([author, speed[0], speed[1]])
+    elif time == "625":
+        global records_625
+        records_625.sort(key=second_value)
+        if speed[0] <= records_625[-1][1]:
+            records_625 = [author, speed[0], speed[1]]
+        elif len(records_625) < 10:
+            records_625.append([author, speed[0], speed[1]])
 
 
 async def update_file() -> None:
@@ -272,7 +279,7 @@ async def get_records(t: str) -> discord.Embed:
     else:
         record = "no data yet :)"
     return discord.Embed(
-        title="Leaderboard:",
+        title=f"{t} Leaderboard:",
         description=record,
         color=discord.Color(65535)) #00ffff
 
@@ -374,22 +381,23 @@ async def sync(inter: discord.Interaction) -> None:
 
 
 # BOT EVENTS
-# sends 408 leaderboard
-@tasks.loop(time=PDT_409)
-async def leaderboard_408() -> None:
-    """sends 408 leaderboard
-    """
-    await bot.wait_until_ready()
-    await send_leaderboard("408")
-
 # sends hrishu leaderboard
 @tasks.loop(time=CST_409)
 async def leaderboard_308() -> None:
     """sends hrishu 408 leaderboard
     """
     await bot.wait_until_ready()
-    await send_leaderboard("hrishu 408")
+    await send_leaderboard("hrishu 408", True)
 
+
+# sends 408 leaderboard
+@tasks.loop(time=PDT_409)
+async def leaderboard_408() -> None:
+    """sends 408 leaderboard
+    """
+    await bot.wait_until_ready()
+    await send_leaderboard("408", False)
+    
 
 # sends 625 leaderboard
 @tasks.loop(time=PDT_626)
@@ -397,7 +405,7 @@ async def leaderboard_625() -> None:
     """sends 625 leaderboard
     """
     await bot.wait_until_ready()
-    await send_leaderboard("625")
+    await send_leaderboard("625", False)
 
 
 # pings @408 ping at 4:08pm PDT
@@ -452,7 +460,7 @@ async def on_message(message: discord.Message) -> None:
     if message.channel.id == CHANNEL_408_ID:
         if message.content == EMOJI_408 or message.content == EMOJI_625:
             text = EMOJI_TO_TEXT[message.content]
-            t = message.created_at
+            t: datetime.datetime = message.created_at
             timestamp = [pdt_hm(str(t.hour) + ":" + valid_num(t.minute)),
                          t.second * 1000 + round(t.microsecond / 1000)]
             print(f"a {text} emoji was sent at {timestamp[0]}:{s_ms(timestamp[1])}")
