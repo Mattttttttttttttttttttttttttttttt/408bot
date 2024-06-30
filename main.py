@@ -502,10 +502,10 @@ async def on_ready() -> None:
     synced = await bot.tree.sync(guild=bot.get_guild(WCB_ID))
     print(f"synced command {[synced[i].name for i in range(len(synced))]}")
     file = shelve.open("data")
-    if 408 in list(file.keys()):
+    if "408" in list(file.keys()):
         global records_408
         records_408 = file["408"]
-    elif 625 in list(file.keys()):
+    elif "625" in list(file.keys()):
         global records_625
         records_625 = file["625"]
     CHANNEL_408 = bot.get_channel(CHANNEL_408_ID)
