@@ -461,7 +461,7 @@ async def on_message(message: discord.Message) -> None:
         if message.content == EMOJI_408 or message.content == EMOJI_625:
             text = EMOJI_TO_TEXT[message.content]
             t: datetime.datetime = message.created_at
-            timestamp = [pdt_hm(str(t.hour) + ":" + t.minute),
+            timestamp = [pdt_hm(str(t.hour) + ":" + str(t.minute)),
                          t.second * 1000 + round(t.microsecond / 1000)]
             print(f"a {text} emoji was sent at {timestamp[0]}:{s_ms(timestamp[1])}")
             if pdt_h(t.hour) == "15" and message.content == EMOJI_408:
