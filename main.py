@@ -44,7 +44,7 @@ LIST_625 = [18, 25]
 
 # variables
 medal: int
-users: list = []
+users: list = [] #[message.author.id, ms]
 need_to_react: list = []
 records_408: list = [] #one element = [user id, ms, lb id]
 records_625: list = []
@@ -210,8 +210,8 @@ bruh not a single person did {timestamp} today''')
             message += f"\n{RANKING_TO_EMOJI[i]} <@{user}> {s_ms(t)}"
         msg = await CHANNEL_408.send(message)
         print("sent leaderboard " + timestamp)
-        if hrishu:
-            for i, [user, t] in enumerate(users, 1):
+        if not hrishu:
+            for [user, t] in users:
                 await update(user, [t, msg.id], timestamp) #updates record
             await update_file() #updates the file
 
@@ -228,14 +228,14 @@ async def update(author: int, speed: list, time: str) -> None:
         global records_408
         records_408.sort(key=second_value)
         if speed[0] <= records_408[-1][1]:
-            records_408[-1] = [author, speed[0], speed[1]]
+            records_408[-1] = [author, speed[0], speed[1]] # no need to sort since it's sorted at get_records
         elif len(records_408) < 10:
             records_408.append([author, speed[0], speed[1]])
     elif time == "625":
         global records_625
         records_625.sort(key=second_value)
         if speed[0] <= records_625[-1][1]:
-            records_625 = [author, speed[0], speed[1]]
+            records_625[-1] = [author, speed[0], speed[1]] # no need to sort since it's sorted at get_records
         elif len(records_625) < 10:
             records_625.append([author, speed[0], speed[1]])
 
@@ -461,7 +461,7 @@ async def on_message(message: discord.Message) -> None:
         if message.content == EMOJI_408 or message.content == EMOJI_625:
             text = EMOJI_TO_TEXT[message.content]
             t: datetime.datetime = message.created_at
-            timestamp = [pdt_hm(str(t.hour) + ":" + valid_num(t.minute)),
+            timestamp = [pdt_hm(str(t.hour) + ":" + t.minute),
                          t.second * 1000 + round(t.microsecond / 1000)]
             print(f"a {text} emoji was sent at {timestamp[0]}:{s_ms(timestamp[1])}")
             if pdt_h(t.hour) == "15" and message.content == EMOJI_408:
