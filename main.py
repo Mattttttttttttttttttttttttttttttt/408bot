@@ -237,8 +237,8 @@ async def update_file() -> None:
     """writes records_408 and records_625 to a file
     """
     file = shelve.open("data")
-    file[408] = records_408
-    file[625] = records_625
+    file["408"] = records_408
+    file["625"] = records_625
     file.close()
 
 async def get_records(t: str) -> discord.Embed:
@@ -323,8 +323,8 @@ async def feeddata(inter: discord.Interaction, data: str) -> None:
     records_408.sort(key=second_value)
     records_625.sort(key=second_value)
     file = shelve.open("data")
-    file[408] = records_408
-    file[625] = records_625
+    file["408"] = records_408
+    file["625"] = records_625
     file.close()
     await inter.edit_original_response(content=f"records_408: {records_408}\nrecords_625: {records_625}")
 
@@ -496,10 +496,10 @@ async def on_ready() -> None:
     file = shelve.open("data")
     if 408 in list(file.keys()):
         global records_408
-        records_408 = file[408]
+        records_408 = file["408"]
     elif 625 in list(file.keys()):
         global records_625
-        records_625 = file[625]
+        records_625 = file["625"]
     CHANNEL_408 = bot.get_channel(CHANNEL_408_ID)
 
 
