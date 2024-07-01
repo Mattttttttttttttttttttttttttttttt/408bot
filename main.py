@@ -1,3 +1,7 @@
+"""this module runs 408 bot"""
+
+# no todos yet
+
 import os
 from time import sleep
 from datetime import timezone, timedelta
@@ -154,6 +158,23 @@ def second_value(val: list) -> int:
     return val[1]
 
 
+def filter_records(record: list[list], first_item: int) -> list:
+    """keeps the element of the input list that has the given first item
+
+    Args:
+        record (list[list]): the input list
+        first_item (int): the first item of the sublist of the input list
+
+    Returns:
+        list: the filtered list
+    """
+    result = []
+    for i in record:
+        if i[0] == first_item:
+            result.append(i)
+    return result
+
+
 async def react(message: discord.Message, timestamp: list, t: list = None):
     """react to the given message with different emojis
 
@@ -227,18 +248,21 @@ async def update(author: int, speed: list, time: str) -> None:
     """
     if time == "408":
         global records_408
-        records_408.sort(key=second_value)
-        if speed[0] <= records_408[-1][1]:
-            records_408[-1] = [author, speed[0], speed[1]] # no need to sort since it's sorted at get_records
-        elif len(records_408) < 10:
+        temp_records_408 = sorted(filter_records(records_408, author), key=second_value)
+        if len(temp_records_408) < 5:
             records_408.append([author, speed[0], speed[1]])
+        elif speed[0] <= temp_records_408[-1][1]:
+            records_408.append([author, speed[0], speed[1]])
+            records_408.remove(temp_records_408[-1][1])
+            # ^no need to sort since it's sorted at get_records
     elif time == "625":
         global records_625
-        records_625.sort(key=second_value)
-        if speed[0] <= records_625[-1][1]:
-            records_625[-1] = [author, speed[0], speed[1]] # no need to sort since it's sorted at get_records
-        elif len(records_625) < 10:
+        temp_records_625 = sorted(filter_records(records_625, author), key=second_value)
+        if len(temp_records_625) < 5:
             records_625.append([author, speed[0], speed[1]])
+        elif speed[0] <= temp_records_625[-1][1]:
+            records_625.append([author, speed[0], speed[1]])
+            records_625.remove(temp_records_625[-1][1])
 
 
 async def update_file() -> None:
@@ -249,40 +273,84 @@ async def update_file() -> None:
     file["625"] = records_625
     file.close()
 
-async def get_records(t: str) -> discord.Embed:
+async def get_records(user: int, t: str) -> discord.Embed:
     """returns the records of the server
 
     Args:
+        user (int): the id of the user requested
         t (str): 408 or 625
 
     Returns:
         discord.Embed: the embed to return
     """
-    if t == "408" and records_408:
-        records_408.sort(key=second_value)
-        record = []
-        for i, [key, val, msg] in enumerate(records_408):
-            msg = await CHANNEL_408.fetch_message(msg)
-            msg = f"https://discord.com/channels/{WCB_ID}/{CHANNEL_408_ID}/{msg.id}"
-            record.append(f"{i}. [{s_ms(val)}]({msg}): <@{key}>")
-            #e.g. 1. 0ms: @matt
-        record = "\n".join(record)
-            #key = user id, val = time in ms, id = id to leaderboard sent
-    elif t == "625" and records_625:
-        records_625.sort(key=second_value)
-        record = []
-        for i, [key, val, msg] in enumerate(records_625):
-            msg = await CHANNEL_408.fetch_message(msg)
-            msg = f"https://discord.com/channels/{WCB_ID}/{CHANNEL_408_ID}/{msg.id}"
-            record.append(f"{i}. [{s_ms(val)}]({msg}): <@{key}>")
-            #e.g. 1. 0ms: @matt
-        record = "\n".join(record)
-    else:
-        record = "no data yet :)"
-    return discord.Embed(
-        title=f"{t} Leaderboard:",
-        description=record,
+    assert t is not None, "you can't have an empty time"
+    if user is None:
+        title = f"{t} Leaderboard:"
+        if t == "408":
+            record = await get_time_records(records_408)
+        elif t == "625":
+            record = await get_time_records(records_625)
+    else: # user is not None
+        title = f"{t} Leaderboard:"
+        if t == "408":
+            record = f"<@{user}>:\n" +\
+                    await get_user_time_records(filter_records(records_408, user))
+        elif t == "625":
+            record = f"<@{user}>:\n" +\
+                    await get_user_time_records(filter_records(records_625, user))
+    result = discord.Embed(
+        title=title,
+        description=record, # TODO: turn pages
         color=discord.Color(65535)) #00ffff
+    return result
+
+
+async def get_user_time_records(records: list) -> str:
+    """generates a leaderboard formated string from a user-specific records list
+    used when both user and time is given
+
+    Args:
+        records (list): a sublist of records_408 or _625 that only has a given user
+
+    Returns:
+        str: the leaderboard formated string
+    """
+    if records == []:
+        return "no data yet :)"
+    else:
+        records.sort(key=second_value)
+        record = []
+        for i, data in enumerate(records):
+            #key = user id, val = time in ms, id = id to leaderboard sent
+            msg = await CHANNEL_408.fetch_message(data[2])
+            msg = f"https://discord.com/channels/{WCB_ID}/{CHANNEL_408_ID}/{msg.id}"
+            record.append(f"{i + 1}. [{s_ms(data[1])}]({msg})")
+            #e.g. 1. 0ms: @matt
+        return "\n".join(record)
+
+
+async def get_time_records(records: list) -> str:
+    """generates a leaderboard formated string from a records list
+    used when time is given but user is not
+
+    Args:
+        records (list): the records to look at
+
+    Returns:
+        str: the leaderboard formated string
+    """
+    if records == []:
+        return "no data yet :)"
+    else:
+        records.sort(key=second_value)
+        record = []
+        for i, [key, val, msg] in enumerate(records):
+            #key = user id, val = time in ms, id = id to leaderboard sent
+            msg = await CHANNEL_408.fetch_message(msg)
+            msg = f"https://discord.com/channels/{WCB_ID}/{CHANNEL_408_ID}/{msg.id}"
+            record.append(f"{i + 1}. [{s_ms(val)}]({msg}): <@{key}>")
+            #e.g. 1. 0ms: @matt
+        return "\n".join(record)
 
 
 # BOT COMMANDS
@@ -334,7 +402,8 @@ async def feeddata(inter: discord.Interaction, data: str) -> None:
     file["408"] = records_408
     file["625"] = records_625
     file.close()
-    await inter.edit_original_response(content=f"records_408: {records_408}\nrecords_625: {records_625}")
+    await inter.edit_original_response(content=f"records_408: {records_408}\n"\
+        f"records_625: {records_625}")
 
 
 @bot.tree.command(name="leaderboard",
@@ -342,14 +411,22 @@ async def feeddata(inter: discord.Interaction, data: str) -> None:
 @app_commands.choices(lb=[
     app_commands.Choice(name="408", value="408"),
     app_commands.Choice(name="625", value="625")])
-async def leaderboard(inter: discord.Interaction, lb: str) -> None:
+async def leaderboard(inter: discord.Interaction, user: discord.User=None, lb: str=None) -> None:
     """prints the leaderboard
 
     Args:
         inter (discord.Interaction): default parameter
+        user (discord.User): the user requested
+        lb (str): the leaderboard requested, "408" or "625"
     """
     await inter.response.defer()
-    await inter.edit_original_response(embed=await get_records(lb))
+    user = None if user is None else user.id
+    if lb is None:
+        temp_embed = await get_records(user, "625")
+        await inter.edit_original_response(embed=await get_records(user, "408"))
+        await inter.channel.send(embed=temp_embed)
+    else:
+        await inter.edit_original_response(embed=await get_records(user, lb))
 
 
 @bot.tree.command(name="ping", description="bot's delay")
@@ -360,7 +437,8 @@ async def ping(inter: discord.Interaction) -> None:
         inter (discord.Interaction): default parameter
     """
     await inter.response.defer()
-    await inter.edit_original_response(content=f"408 bot has a delay of {round(bot.latency * 1000)}ms")
+    await inter.edit_original_response(content=
+                                       f"408 bot has a delay of {round(bot.latency * 1000)}ms")
 
 
 @bot.tree.command(name="sync", description="Owner only")
@@ -398,7 +476,7 @@ async def leaderboard_408() -> None:
     """
     await bot.wait_until_ready()
     await send_leaderboard("408", False)
-    
+
 
 # sends 625 leaderboard
 @tasks.loop(time=PDT_626)
@@ -481,7 +559,8 @@ async def on_ready() -> None:
     """initiates the bot
     """
     global CHANNEL_408
-    print(f"{bot.user} is now online!\ntime: " + datetime.datetime.now(PDT).strftime('%m-%d %H:%M:%S'))
+    print(f"{bot.user} is now online!\ntime: " +
+          datetime.datetime.now(PDT).strftime('%m-%d %H:%M:%S'))
     if not send_408.is_running():
         send_408.start()
         print("started 408")
