@@ -172,6 +172,8 @@ async def react(message: discord.Message, timestamp: list, t: list = None):
         t = list_time(t)
         user_ids = [users[i][0] for i in range(len(users))]
         if timestamp[0] == t and message.author.id not in user_ids and medal < 10:
+            users.append([message.author.id, timestamp[1]])
+            # ^this is first because in the condition above there's "in user_ids"
             need_to_react.append([message, timestamp[1]])
             sleep(min(bot.latency, 0.5))
             medal += 1
@@ -180,7 +182,6 @@ async def react(message: discord.Message, timestamp: list, t: list = None):
             await need_to_react.pop(0)[0].add_reaction(RANKING_TO_EMOJI[copy])
             print(f"reacted with {RANKING_TO_EMOJI[copy]}")
             # adds the user id to a list, along with the ms
-            users.append([message.author.id, timestamp[1]])
         elif timestamp[0] == t and (message.author.id in user_ids or medal >= 10):
             await message.add_reaction("🙂")
         elif timestamp[0] == plus or timestamp[0] == minus:
