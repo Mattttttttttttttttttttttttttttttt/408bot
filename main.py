@@ -197,8 +197,7 @@ async def react(message: discord.Message, timestamp: list, t: list = None):
             # ^this is first because in the condition above there's "in user_ids"
             need_to_react.append([message, timestamp[1]])
             sleep(min(bot.latency, 0.5))
-            medal += 1
-            copy = medal
+            copy = metal = metal + 1
             need_to_react.sort(key=second_value)
             await need_to_react.pop(0)[0].add_reaction(RANKING_TO_EMOJI[copy])
             print(f"reacted with {RANKING_TO_EMOJI[copy]}")
@@ -253,7 +252,7 @@ async def update(author: int, speed: list, time: str) -> None:
             records_408.append([author, speed[0], speed[1]])
         elif speed[0] <= temp_records_408[-1][1]:
             records_408.append([author, speed[0], speed[1]])
-            records_408.remove(temp_records_408[-1][1])
+            records_408.remove(temp_records_408[-1])
             # ^no need to sort since it's sorted at get_records
     elif time == "625":
         global records_625
@@ -262,7 +261,7 @@ async def update(author: int, speed: list, time: str) -> None:
             records_625.append([author, speed[0], speed[1]])
         elif speed[0] <= temp_records_625[-1][1]:
             records_625.append([author, speed[0], speed[1]])
-            records_625.remove(temp_records_625[-1][1])
+            records_625.remove(temp_records_625[-1])
 
 
 async def update_file() -> None:
