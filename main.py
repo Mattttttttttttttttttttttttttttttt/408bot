@@ -197,7 +197,7 @@ async def react(message: discord.Message, timestamp: list, t: list = None):
             # ^this is first because in the condition above there's "in user_ids"
             need_to_react.append([message, timestamp[1]])
             sleep(min(bot.latency, 0.5))
-            copy = metal = metal + 1
+            copy = medal = medal + 1
             need_to_react.sort(key=second_value)
             await need_to_react.pop(0)[0].add_reaction(RANKING_TO_EMOJI[copy])
             print(f"reacted with {RANKING_TO_EMOJI[copy]}")
