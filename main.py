@@ -209,6 +209,26 @@ def filter_records(record: list[list], first_item: int) -> list:
     return result
 
 
+async def send_long_message(inter: discord.Interaction, content: list)-> None:
+    """sends a long message in chunk of 2000 characters
+
+    Args:
+        inter (discord.Interaction): the interaction to respond to
+        content (list): the content to send
+    """
+    while len(content[-1]) > 2000:
+        content.append(content[-1][0:2000])
+        content.append(content[-2][2000:])
+        del content[-3]
+    await inter.edit_original_response(
+        content=content[0])
+    if len(content) > 1:
+        for i, txt in enumerate(content):
+            if i == 0:
+                continue
+            await inter.channel.send(content=txt)
+
+
 async def react(message: discord.Message, timestamp: list, t: list|None = None):
     """react to the given message with different emojis
 
@@ -253,6 +273,7 @@ async def send_leaderboard(timestamp: str, hrishu: bool) -> None:
         hrishu (bool): whether it's 308, which doesn't not have data leaderboard
     """
     # users = [[user id, time in ms], ...]
+    global users
     if not users:
         await CHANNEL_408.send(
             f'''# {datetime.datetime.now(PDT).strftime("%m/%d/%Y")} leaderboard
@@ -269,6 +290,7 @@ bruh not a single person did {timestamp} today''')
             for [user, t] in users:
                 await update(user, [t, msg.id], timestamp) #updates record
             await update_file() #updates the file
+        user = []
 
 
 async def update(author: int, speed: list, time: str) -> None:
@@ -411,15 +433,7 @@ async def getdata(inter: discord.Interaction) -> None:
 {"\n".join([f"a{id} {t} {msg}" for id, t, msg in records_408])}
 625
 {"\n".join([f"a{id} {t} {msg}" for id, t, msg in records_625])}''']
-    while len(content[-1]) > 2000:
-        content[-1] = [content[-1][0:2000], content[-1][2000:]]
-    await inter.edit_original_response(
-        content=content[0])
-    if len(content) > 1:
-        for i, txt in enumerate(content):
-            if i == 0:
-                continue
-            await inter.channel.send(content=txt)
+    await send_long_message(inter, content)
     # outputs
     # 408
     # (user id) (time in ms) (id to leaderboard message)
@@ -430,29 +444,30 @@ async def getdata(inter: discord.Interaction) -> None:
 
 @bot.tree.command(name="feeddata", description="DANGEROUS: append to the data of this server")
 @app_commands.default_permissions()
-async def feeddata(inter: discord.Interaction, data: str) -> None:
+async def feeddata(inter: discord.Interaction, data: str, overwrite: bool) -> None:
     """feed in the data for the server in a string
 
     Args:
         inter (discord.Interaction): default parameter
         data (str): the data in the format of "408 a(user id) (ms) (leaderboard message id) 625 ..."
+        overwrite (bool): whether to overwrite the original data
     """
     await inter.response.defer(ephemeral=True)
     global records_408, records_625
+    if overwrite:
+        records_408 = []
+        records_625 = []
     data = re.compile(r"408 (.*) 625 (.*)").search(data)
     data_408 = re.compile(r"a(\d+) (\d+) (\d+)").findall(data.group(1))
     data_625 = re.compile(r"a(\d+) (\d+) (\d+)").findall(data.group(2))
     for i in data_408:
-        records_408.append([int(i[0]), int(i[1]), int(i[2])])
+        await update(int(i[0]), [int(i[1]), int(i[2])], "408")
     for i in data_625:
-        records_625.append([int(i[0]), int(i[1]), int(i[2])])
+        await update(int(i[0]), [int(i[1]), int(i[2])], "625")
     records_408.sort(key=second_value)
     records_625.sort(key=second_value)
-    file = shelve.open("data")
-    file["408"] = records_408
-    file["625"] = records_625
-    file.close()
-    await inter.edit_original_response(content=f"records_408: {records_408}\n"\
+    await update_file()
+    await send_long_message(inter, f"records_408: {records_408}\n"\
         f"records_625: {records_625}")
 
 
@@ -548,10 +563,9 @@ async def leaderboard_625() -> None:
 async def send_408() -> None:
     """sends 408 ping
     """
-    global medal, users
+    global medal
     await bot.wait_until_ready()
     medal = 0
-    users = []
     await CHANNEL_408.send(ROLE_408)
     await CHANNEL_408.send("get ready guys")
     print("sent 408 ping at " + datetime.datetime.now(PDT).strftime('%m-%d %H:%M:%S'))
@@ -563,9 +577,8 @@ async def send_hrishu() -> None:
     """sends hrishu 408 ping
     """
     await bot.wait_until_ready()
-    global medal, users
+    global medal
     medal = 0
-    users = []
     await CHANNEL_408.send("<@1124542462682218600>")
     await CHANNEL_408.send("get ready hrishu")
     print("sent hrishu ping at " + datetime.datetime.now(PDT).strftime('%m-%d %H:%M:%S'))
@@ -577,9 +590,8 @@ async def send_625() -> None:
     """sends 625 ping
     """
     await bot.wait_until_ready()
-    global medal, users
+    global medal
     medal = 0
-    users = []
     await CHANNEL_408.send(ROLE_625)
     await CHANNEL_408.send("get ready guys")
     print("sent 625 ping at " + datetime.datetime.now(PDT).strftime('%m-%d %H:%M:%S'))
