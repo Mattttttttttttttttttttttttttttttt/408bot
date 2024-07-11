@@ -209,24 +209,30 @@ def filter_records(record: list[list], first_item: int) -> list:
     return result
 
 
-async def send_long_message(inter: discord.Interaction, content: list)-> None:
+async def send_long_message(inter: discord.Interaction, content: list, id: int|None=None)-> None:
     """sends a long message in chunk of 2000 characters
 
     Args:
         inter (discord.Interaction): the interaction to respond to
         content (list): the content to send
+        id (int | None): if the message should be private, the user to send the following messages to
     """
     while len(content[-1]) > 2000:
         content.append(content[-1][0:2000])
         content.append(content[-2][2000:])
         del content[-3]
-    await inter.edit_original_response(
-        content=content[0])
+    if id:
+        await inter.edit_original_response(content=content[0])
+    else:
+        await bot.get_user(id).send(content=content[0])
     if len(content) > 1:
         for i, txt in enumerate(content):
             if i == 0:
                 continue
-            await inter.channel.send(content=txt)
+            if id:
+                await inter.channel.send(content=txt)
+            else:
+                await bot.get_user(id).send(content=txt)
 
 
 async def react(message: discord.Message, timestamp: list, t: list|None = None):
@@ -433,7 +439,7 @@ async def getdata(inter: discord.Interaction) -> None:
 {"\n".join([f"a{id} {t} {msg}" for id, t, msg in records_408])}
 625
 {"\n".join([f"a{id} {t} {msg}" for id, t, msg in records_625])}''']
-    await send_long_message(inter, content)
+    await send_long_message(inter, content, inter.user.id)
     # outputs
     # 408
     # (user id) (time in ms) (id to leaderboard message)
