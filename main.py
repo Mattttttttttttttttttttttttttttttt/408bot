@@ -475,8 +475,8 @@ async def feeddata(inter: discord.Interaction, data: str, overwrite: bool) -> No
     records_408.sort(key=second_value)
     records_625.sort(key=second_value)
     await update_file()
-    await send_long_message(inter, f"records_408: {records_408}\n"\
-        f"records_625: {records_625}")
+    await send_long_message(inter, [f"records_408: {records_408}\n"\
+        f"records_625: {records_625}"], inter.user.id)
 
 
 @bot.tree.command(name="leaderboard",
