@@ -222,17 +222,17 @@ async def send_long_message(inter: discord.Interaction, content: list, id: int|N
         content.append(content[-2][2000:])
         del content[-3]
     if id:
-        await inter.edit_original_response(content=content[0])
-    else:
         await bot.get_user(id).send(content=content[0])
+    else:
+        await inter.edit_original_response(content=content[0])
     if len(content) > 1:
         for i, txt in enumerate(content):
             if i == 0:
                 continue
             if id:
-                await inter.channel.send(content=txt)
-            else:
                 await bot.get_user(id).send(content=txt)
+            else:
+                await inter.channel.send(content=txt)
 
 
 async def react(message: discord.Message, timestamp: list, t: list|None = None):
