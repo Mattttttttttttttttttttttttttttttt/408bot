@@ -12,6 +12,7 @@ from discord import app_commands
 from discord.ext import tasks, commands
 from dotenv import load_dotenv
 import discord
+from helpers import find_all, valid_num
 
 
 load_dotenv()
@@ -76,9 +77,46 @@ EMOJI_TO_TEXT = {EMOJI_408: "408",
                  EMOJI_625: "625"}
 
 
+# VIEW CLASS
+class Buttons(discord.ui.View):
+    """class representing a group of back and forward buttons"""
+
+    records: list
+    page: int
+
+    def __init__(self, records: list) -> None:
+        super().__init__(timeout=60)
+        self.records = records
+        self.page = 0
+
+    @discord.ui.button(label="⬅️",style=discord.ButtonStyle.gray)
+    async def back(self, inter: discord.Interaction) -> None:
+        """turn page back
+
+        Args:
+            inter (discord.Interaction): default parameter
+        """
+        if self.page == 0:
+            pass
+        else:
+            self.page -= 1
+            inter.edit_original_response(embed=self.records[self.page])
+
+    @discord.ui.button(label="⬅️",style=discord.ButtonStyle.gray)
+    async def forward(self, inter: discord.Interaction) -> None:
+        """turn page forward
+
+        Args:
+            inter (discord.Interaction): default parameter
+        """
+        if self.page == len(self.records) -1:
+            pass
+        else:
+            self.page += 1
+            inter.edit_original_response(embed=self.records[self.page])
+
+
 # HELPER FUNCTIONS
-
-
 def s_ms(t: int) -> str:
     """returns a string describing the time length given a microsecond
 
@@ -90,19 +128,6 @@ def s_ms(t: int) -> str:
     """
     return str(t/1000) + "s" if t >= 1000 else str(t) + "ms"
     # either ~ 1s or 500ms
-
-
-def valid_num(num: int) -> str:
-    """adds 0 before a one-digit number
-
-    Args:
-        num (int): number to be modified
-
-    Returns:
-        str: the resultant string
-    """
-    return str(num) if num >= 10 else "0" + str(num)
-    # either ~ 02 or 10
 
 
 def pdt_h(hour: str) -> str:
@@ -272,12 +297,12 @@ async def update_file() -> None:
     file["625"] = records_625
     file.close()
 
-async def get_records(user: int, t: str) -> discord.Embed:
+async def get_records(user: int | None, t: str | None) -> discord.Embed:
     """returns the records of the server
 
     Args:
-        user (int): the id of the user requested
-        t (str): 408 or 625
+        user (int | None): the id of the user requested, or none
+        t (str | None): 408 or 625, or none
 
     Returns:
         discord.Embed: the embed to return
@@ -297,10 +322,21 @@ async def get_records(user: int, t: str) -> discord.Embed:
         elif t == "625":
             record = f"<@{user}>:\n" +\
                     await get_user_time_records(filter_records(records_625, user))
-    result = discord.Embed(
-        title=title,
-        description=record, # TODO: turn pages
-        color=discord.Color(65535)) #00ffff
+    new_record = [record]
+    if find_all(record, "\n") > 9: # has more than 10 entries
+        new_record = []
+        for i, entry in enumerate(record.split("\n")):
+            if i % 10 != 0:
+                new_record = "\n".join([new_record[-1], entry])
+            else:
+                new_record.append(entry)
+    record = new_record
+    result: list[discord.Embed] = []
+    for i in record:
+        result.append(discord.Embed(
+            title=title,
+            description=record,
+            color=discord.Color(65535))) #00ffff
     return result
 
 
@@ -410,7 +446,7 @@ async def feeddata(inter: discord.Interaction, data: str) -> None:
 @app_commands.choices(lb=[
     app_commands.Choice(name="408", value="408"),
     app_commands.Choice(name="625", value="625")])
-async def leaderboard(inter: discord.Interaction, user: discord.User=None, lb: str=None) -> None:
+async def leaderboard(inter: discord.Interaction, user: discord.User=None, lb=None) -> None:
     """prints the leaderboard
 
     Args:
@@ -421,11 +457,16 @@ async def leaderboard(inter: discord.Interaction, user: discord.User=None, lb: s
     await inter.response.defer()
     user = None if user is None else user.id
     if lb is None:
-        temp_embed = await get_records(user, "625")
-        await inter.edit_original_response(embed=await get_records(user, "408"))
-        await inter.channel.send(embed=temp_embed)
+        embed_408: list = await get_records(user, "408")
+        embed_625: list = await get_records(user, "625")
+        view_408 = Buttons(embed_408)
+        view_625 = Buttons(embed_625)
+        await inter.edit_original_response(embed=embed_408[0], view=view_408)
+        await inter.channel.send(embed=embed_625[0], view=view_625)
     else:
-        await inter.edit_original_response(embed=await get_records(user, lb))
+        embed: list = await get_records(user, lb)
+        view = Buttons(embed)
+        await inter.edit_original_response(embed=embed[0], view=view)
 
 
 @bot.tree.command(name="ping", description="bot's delay")
