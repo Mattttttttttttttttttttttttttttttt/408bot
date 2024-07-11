@@ -83,37 +83,46 @@ class Buttons(discord.ui.View):
 
     records: list
     page: int
+    max_page: int
 
     def __init__(self, records: list) -> None:
-        super().__init__(timeout=60)
+        super().__init__(timeout=120)
         self.records = records
         self.page = 0
+        self.max_page = len(records) - 1
 
-    @discord.ui.button(label="⬅️",style=discord.ButtonStyle.gray)
-    async def back(self, inter: discord.Interaction) -> None:
+    @discord.ui.button(emoji="◀️", style=discord.ButtonStyle.gray, disabled=True,
+                       custom_id="back")
+    async def back(self, inter: discord.Interaction, button: discord.ui.Button) -> None:
         """turn page back
 
         Args:
             inter (discord.Interaction): default parameter
         """
         if self.page == 0:
-            pass
-        else:
-            self.page -= 1
-            inter.edit_original_response(embed=self.records[self.page])
+            return None
+        elif self.page == 1:
+            button.disabled = True
+        self.page -= 1
+        if self.page != self.max_page:
+            [i for i in self.children if i.custom_id == "forward"][0].disabled = False
+        await inter.response.edit_message(embed=self.records[self.page], view=self)
 
-    @discord.ui.button(label="⬅️",style=discord.ButtonStyle.gray)
-    async def forward(self, inter: discord.Interaction) -> None:
+    @discord.ui.button(emoji="▶️", style=discord.ButtonStyle.gray, custom_id="forward")
+    async def forward(self, inter: discord.Interaction, button: discord.ui.Button) -> None:
         """turn page forward
 
         Args:
             inter (discord.Interaction): default parameter
         """
-        if self.page == len(self.records) -1:
-            pass
-        else:
-            self.page += 1
-            inter.edit_original_response(embed=self.records[self.page])
+        if self.page == self.max_page:
+            return None
+        elif self.page == self.max_page - 1:
+            button.disabled = True
+        self.page += 1
+        if self.page != 0:
+            [i for i in self.children if i.custom_id == "back"][0].disabled = False
+        await inter.response.edit_message(embed=self.records[self.page], view=self)
 
 
 # HELPER FUNCTIONS
@@ -200,7 +209,7 @@ def filter_records(record: list[list], first_item: int) -> list:
     return result
 
 
-async def react(message: discord.Message, timestamp: list, t: list = None):
+async def react(message: discord.Message, timestamp: list, t: list|None = None):
     """react to the given message with different emojis
 
     Args:
@@ -327,7 +336,7 @@ async def get_records(user: int | None, t: str | None) -> discord.Embed:
         new_record = []
         for i, entry in enumerate(record.split("\n")):
             if i % 10 != 0:
-                new_record = "\n".join([new_record[-1], entry])
+                new_record[-1] = "\n".join([new_record[-1], entry])
             else:
                 new_record.append(entry)
     record = new_record
@@ -335,7 +344,7 @@ async def get_records(user: int | None, t: str | None) -> discord.Embed:
     for i in record:
         result.append(discord.Embed(
             title=title,
-            description=record,
+            description=i,
             color=discord.Color(65535))) #00ffff
     return result
 
@@ -398,11 +407,19 @@ async def getdata(inter: discord.Interaction) -> None:
         inter (discord.Interaction): default parameter
     """
     await inter.response.defer(ephemeral=True)
-    await inter.edit_original_response(
-        content=f'''408
+    content = [f'''408
 {"\n".join([f"a{id} {t} {msg}" for id, t, msg in records_408])}
 625
-{"\n".join([f"a{id} {t} {msg}" for id, t, msg in records_625])}''')
+{"\n".join([f"a{id} {t} {msg}" for id, t, msg in records_625])}''']
+    while len(content[-1]) > 2000:
+        content[-1] = [content[-1][0:2000], content[-1][2000:]]
+    await inter.edit_original_response(
+        content=content[0])
+    if len(content) > 1:
+        for i, txt in enumerate(content):
+            if i == 0:
+                continue
+            await inter.channel.send(content=txt)
     # outputs
     # 408
     # (user id) (time in ms) (id to leaderboard message)
@@ -411,19 +428,17 @@ async def getdata(inter: discord.Interaction) -> None:
     # ...
 
 
-@bot.tree.command(name="feeddata", description="DANGEROUS: overrite the data of this server")
+@bot.tree.command(name="feeddata", description="DANGEROUS: append to the data of this server")
 @app_commands.default_permissions()
 async def feeddata(inter: discord.Interaction, data: str) -> None:
     """feed in the data for the server in a string
 
     Args:
         inter (discord.Interaction): default parameter
-        data (str): the data to be processed
+        data (str): the data in the format of "408 a(user id) (ms) (leaderboard message id) 625 ..."
     """
     await inter.response.defer(ephemeral=True)
     global records_408, records_625
-    records_408 = []
-    records_625 = []
     data = re.compile(r"408 (.*) 625 (.*)").search(data)
     data_408 = re.compile(r"a(\d+) (\d+) (\d+)").findall(data.group(1))
     data_625 = re.compile(r"a(\d+) (\d+) (\d+)").findall(data.group(2))
@@ -446,26 +461,27 @@ async def feeddata(inter: discord.Interaction, data: str) -> None:
 @app_commands.choices(lb=[
     app_commands.Choice(name="408", value="408"),
     app_commands.Choice(name="625", value="625")])
-async def leaderboard(inter: discord.Interaction, user: discord.User=None, lb=None) -> None:
+async def leaderboard(inter: discord.Interaction,
+                      user: discord.User=None, lb: str|None=None) -> None:
     """prints the leaderboard
 
     Args:
         inter (discord.Interaction): default parameter
         user (discord.User): the user requested
-        lb (str): the leaderboard requested, "408" or "625"
+        lb (str|None): the leaderboard requested, "408" or "625"
     """
     await inter.response.defer()
     user = None if user is None else user.id
     if lb is None:
         embed_408: list = await get_records(user, "408")
         embed_625: list = await get_records(user, "625")
-        view_408 = Buttons(embed_408)
-        view_625 = Buttons(embed_625)
+        view_408 = Buttons(embed_408) if len(embed_408) > 1 else None
         await inter.edit_original_response(embed=embed_408[0], view=view_408)
+        view_625 = Buttons(embed_625) if len(embed_625) > 1 else None
         await inter.channel.send(embed=embed_625[0], view=view_625)
     else:
         embed: list = await get_records(user, lb)
-        view = Buttons(embed)
+        view = Buttons(embed) if len(embed) > 1 else None
         await inter.edit_original_response(embed=embed[0], view=view)
 
 
