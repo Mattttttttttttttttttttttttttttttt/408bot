@@ -298,7 +298,7 @@ bruh not a single person did {timestamp} today''')
             for [user, t] in users:
                 await update(user, [t, msg.id], timestamp) #updates record
             await update_file() #updates the file
-        user = []
+        users = []
 
 
 async def update(author: int, speed: list, time: str) -> None:
