@@ -437,9 +437,9 @@ async def getdata(inter: discord.Interaction) -> None:
         inter (discord.Interaction): default parameter
     """
     await inter.response.defer(ephemeral=True)
-    content = [f'''408
+    content = [f'''*408*
 {"\n".join([f"a{id} {t} {msg}" for id, t, msg in records_408])}
-625
+*625*
 {"\n".join([f"a{id} {t} {msg}" for id, t, msg in records_625])}''']
     await send_long_message(inter, content, inter.user.id)
     # outputs
@@ -465,7 +465,7 @@ async def feeddata(inter: discord.Interaction, data: str, overwrite: bool) -> No
     if overwrite:
         records_408 = []
         records_625 = []
-    data = re.compile(r"408 (.*) 625 (.*)").search(data)
+    data = re.compile(r"\*408\* (.*) \*625\* (.*)").search(data)
     data_408 = re.compile(r"a(\d+) (\d+) (\d+)").findall(data.group(1))
     data_625 = re.compile(r"a(\d+) (\d+) (\d+)").findall(data.group(2))
     for i in data_408:
