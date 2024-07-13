@@ -258,7 +258,7 @@ async def react(message: discord.Message, timestamp: list, t: list|None = None):
             users.append([message.author.id, timestamp[1]])
             # ^this is first because in the condition above there's "in user_ids"
             need_to_react.append([message, timestamp[1]])
-            sleep(min(bot.latency, 0.5))
+            sleep(max(bot.latency, 0.5))
             copy = medal = medal + 1
             need_to_react.sort(key=second_value)
             await need_to_react.pop(0)[0].add_reaction(RANKING_TO_EMOJI[copy])
@@ -442,6 +442,7 @@ async def getdata(inter: discord.Interaction) -> None:
 *625*
 {"\n".join([f"a{id} {t} {msg}" for id, t, msg in records_625])}''']
     await send_long_message(inter, content, inter.user.id)
+    await inter.response.edit_message(content="sent to your dm")
     # outputs
     # 408
     # a(user id) (time in ms) (id to leaderboard message)
@@ -477,6 +478,7 @@ async def feeddata(inter: discord.Interaction, data: str, overwrite: bool) -> No
     await update_file()
     await send_long_message(inter, [f"records_408: {records_408}\n"\
         f"records_625: {records_625}"], inter.user.id)
+    await inter.response.edit_message(content="sent to your dm")
 
 
 @bot.tree.command(name="leaderboard",
