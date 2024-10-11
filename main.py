@@ -523,6 +523,20 @@ async def ping(inter: discord.Interaction) -> None:
                                        f"408 bot has a delay of {round(bot.latency * 1000)}ms")
 
 
+@bot.tree.context_menu(name="vote")
+async def vote(inter: discord.Interaction, message: discord.Message) -> None:
+    """reacts checks and x's on a message
+
+    Args:
+        inter (discord.Interaction): default parameter
+        message (discord.Message): the message to react to
+    """
+    await message.add_reaction("✅")
+    await message.add_reaction("❌")
+    print(f"\"{message.content}\" suggestion received")
+    await inter.response.send_message(content="the selected message is voted on", ephemeral=True)
+
+
 @bot.tree.command(name="sync", description="Owner only")
 @app_commands.default_permissions()
 @app_commands.guilds(WCB_ID)
