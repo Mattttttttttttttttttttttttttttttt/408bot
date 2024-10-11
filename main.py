@@ -40,6 +40,7 @@ PDT_625 = datetime.time(18, 24, 0, tzinfo=PDT)
 PDT_626 = datetime.time(18, 26, 0, tzinfo=PDT)
 CHANNEL_408_ID = 1231756043810508822
 CHANNEL_408: discord.TextChannel
+CHANNEL_SUGGESTIONS = 1294100441721737287
 TEST_SERVER_ID = 1240098098513055776
 WCB_ID = 1204222579498557440
 DEVELOPER = 1104220935973777459
@@ -629,6 +630,11 @@ async def on_message(message: discord.Message) -> None:
                 await react(message, timestamp, LIST_625)
             else:
                 await react(message, timestamp)
+    elif message.channel.id == CHANNEL_SUGGESTIONS:
+        if message.content[0] == "*":
+            message.add_reaction("✅")
+            message.add_reaction("❌")
+            print(f"\"{message.content}\" suggestion received")
 
 
 # starts the bot
