@@ -632,8 +632,8 @@ async def on_message(message: discord.Message) -> None:
                 await react(message, timestamp)
     elif message.channel.id == CHANNEL_SUGGESTIONS:
         if message.content[0] == "*":
-            message.add_reaction("✅")
-            message.add_reaction("❌")
+            await message.add_reaction("✅")
+            await message.add_reaction("❌")
             print(f"\"{message.content}\" suggestion received")
 
 
