@@ -30,14 +30,13 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 PDT = timezone(timedelta(hours=-7))
 PST = timezone(timedelta(hours=-8))
 CST = timezone(timedelta(hours=-6))
-PDT_408 = datetime.time(16, 7, 0, tzinfo=PDT)
-PDT_409 = datetime.time(16, 9, 0, tzinfo=PDT)
-PST_408 = datetime.time(16, 7, 0, tzinfo=PST)
-PST_409 = datetime.time(16, 9, 0, tzinfo=PST)
+CA_TZ = PST
+CA_408 = datetime.time(16, 7, 0, tzinfo=CA_TZ)
+CA_409 = datetime.time(16, 9, 0, tzinfo=CA_TZ)
 CST_408 = datetime.time(16, 7, 0, tzinfo=CST)
 CST_409 = datetime.time(16, 9, 0, tzinfo=CST)
-PDT_625 = datetime.time(18, 24, 0, tzinfo=PDT)
-PDT_626 = datetime.time(18, 26, 0, tzinfo=PDT)
+CA_625 = datetime.time(18, 24, 0, tzinfo=CA_TZ)
+CA_626 = datetime.time(18, 26, 0, tzinfo=CA_TZ)
 CHANNEL_408_ID = 1231756043810508822
 CHANNEL_408: discord.TextChannel
 CHANNEL_SUGGESTIONS = 1294100441721737287
@@ -57,6 +56,7 @@ records_625: list = []
 last_vc_ping: datetime.datetime = datetime.datetime(2000, 1, 1, tzinfo=timezone.utc)
 UTC_TO_PDT: int = -7
 UTC_TO_PST: int = -8
+UTC_TO_CA : int = UTC_TO_PST
 EMOJI_408 = "<:408:1232116288113999953>"
 ROLE_408 = "<@&1233927005477797901>"
 EMOJI_625 = "<:625:1246228026006442077>"
@@ -140,32 +140,32 @@ def s_ms(t: int) -> str:
     # either ~ 1s or 500ms
 
 
-def pdt_h(hour: str) -> str:
-    """returns a UTC hour in PDT, both 2-digit numbers
+def ca_h(hour: str) -> str:
+    """returns a UTC hour in pacific time zone, both 2-digit numbers
 
     Args:
         hour (str): hour in UTC
 
     Returns:
-        str: hour in PDT
+        str: hour in pacific time zone
     """
-    if int(hour) > -1 * UTC_TO_PDT:
-        return str(valid_num(int(hour) + UTC_TO_PDT))
+    if int(hour) > -1 * UTC_TO_CA:
+        return str(valid_num(int(hour) + UTC_TO_CA))
     else:
-        return str(valid_num(int(hour) + UTC_TO_PDT + 24))
+        return str(valid_num(int(hour) + UTC_TO_CA + 24))
     # it's valid_num-ed
 
 
-def pdt_hm(t: str) -> str:
-    """returns a UTC time in PDT, both 2-digit numbers
+def ca_hm(t: str) -> str:
+    """returns a UTC time in pacific time zone, both 2-digit numbers
 
     Args:
         t (str): UTC time formatted in %m:%s
 
     Returns:
-        str: PDT time formatted in %m:%s
+        str: pacific time zone time formatted in %m:%s
     """
-    return pdt_h(t.split(":")[0]) + ":" + valid_num(int(t.split(":")[1]))
+    return ca_h(t.split(":")[0]) + ":" + valid_num(int(t.split(":")[1]))
 
 
 def list_time(lst: list) -> str:
@@ -259,7 +259,7 @@ async def react(message: discord.Message, timestamp: list, t: list|None = None):
             users.append([message.author.id, timestamp[1]])
             # ^this is first because in the condition above there's "in user_ids"
             need_to_react.append([message, timestamp[1]])
-            sleep(max(bot.latency, 0.5))
+            sleep(max(bot.latency, 1))
             copy = medal = medal + 1
             need_to_react.sort(key=second_value)
             await need_to_react.pop(0)[0].add_reaction(RANKING_TO_EMOJI[copy])
@@ -285,12 +285,12 @@ async def send_leaderboard(timestamp: str, hrishu: bool) -> None:
     global users
     if not users:
         await CHANNEL_408.send(
-            f'''# {datetime.datetime.now(PDT).strftime("%m/%d/%Y")} leaderboard
+            f'''# {datetime.datetime.now(CA_TZ).strftime("%m/%d/%Y")} leaderboard
 bruh not a single person did {timestamp} today''')
         print("sent empty leaderboard " + timestamp)
     else:
         users.sort(key=second_value)
-        message = f"# {datetime.datetime.now(PDT).strftime("%m/%d/%Y")} {timestamp} leaderboard"
+        message = f"# {datetime.datetime.now(CA_TZ).strftime("%m/%d/%Y")} {timestamp} leaderboard"
         for i, [user, t] in enumerate(users, 1): #user id and ms
             message += f"\n{RANKING_TO_EMOJI[i]} <@{user}> {s_ms(t)}"
         msg = await CHANNEL_408.send(message)
@@ -531,6 +531,7 @@ async def vote(inter: discord.Interaction, message: discord.Message) -> None:
         inter (discord.Interaction): default parameter
         message (discord.Message): the message to react to
     """
+    await inter.response.defer()
     await message.add_reaction("✅")
     await message.add_reaction("❌")
     print(f"\"{message.content}\" suggestion received")
@@ -566,7 +567,7 @@ async def leaderboard_308() -> None:
 
 
 # sends 408 leaderboard
-@tasks.loop(time=PDT_409)
+@tasks.loop(time=CA_409)
 async def leaderboard_408() -> None:
     """sends 408 leaderboard
     """
@@ -575,7 +576,7 @@ async def leaderboard_408() -> None:
 
 
 # sends 625 leaderboard
-@tasks.loop(time=PDT_626)
+@tasks.loop(time=CA_626)
 async def leaderboard_625() -> None:
     """sends 625 leaderboard
     """
@@ -584,7 +585,7 @@ async def leaderboard_625() -> None:
 
 
 # pings @408 ping at 4:08pm PDT
-@tasks.loop(time=PDT_408)
+@tasks.loop(time=CA_408)
 async def send_408() -> None:
     """sends 408 ping
     """
@@ -593,7 +594,7 @@ async def send_408() -> None:
     medal = 0
     await CHANNEL_408.send(ROLE_408)
     await CHANNEL_408.send("get ready guys")
-    print("sent 408 ping at " + datetime.datetime.now(PDT).strftime('%m-%d %H:%M:%S'))
+    print("sent 408 ping at " + datetime.datetime.now(CA_TZ).strftime('%m-%d %H:%M:%S'))
 
 
 # pings @408 ping at 4:08pm CST
@@ -606,11 +607,11 @@ async def send_hrishu() -> None:
     medal = 0
     await CHANNEL_408.send("<@1124542462682218600>")
     await CHANNEL_408.send("get ready hrishu")
-    print("sent hrishu ping at " + datetime.datetime.now(PDT).strftime('%m-%d %H:%M:%S'))
+    print("sent hrishu ping at " + datetime.datetime.now(CA_TZ).strftime('%m-%d %H:%M:%S'))
 
 
 # pings @408 ping at 4:08pm CST
-@tasks.loop(time=PDT_625)
+@tasks.loop(time=CA_625)
 async def send_625() -> None:
     """sends 625 ping
     """
@@ -619,7 +620,7 @@ async def send_625() -> None:
     medal = 0
     await CHANNEL_408.send(ROLE_625)
     await CHANNEL_408.send("get ready guys")
-    print("sent 625 ping at " + datetime.datetime.now(PDT).strftime('%m-%d %H:%M:%S'))
+    print("sent 625 ping at " + datetime.datetime.now(CA_TZ).strftime('%m-%d %H:%M:%S'))
 
 
 @bot.event
@@ -633,14 +634,14 @@ async def on_message(message: discord.Message) -> None:
         if message.content == EMOJI_408 or message.content == EMOJI_625:
             text = EMOJI_TO_TEXT[message.content]
             t: datetime.datetime = message.created_at
-            timestamp = [pdt_hm(str(t.hour) + ":" + str(t.minute)),
+            timestamp = [ca_hm(str(t.hour) + ":" + str(t.minute)),
                          t.second * 1000 + round(t.microsecond / 1000)]
             print(f"a {text} emoji was sent at {timestamp[0]}:{s_ms(timestamp[1])}")
-            if pdt_h(t.hour) == "15" and message.content == EMOJI_408:
+            if ca_h(t.hour) == "15" and message.content == EMOJI_408:
                 await react(message, timestamp, LIST_HRISHU)
-            elif pdt_h(t.hour) == "16" and message.content == EMOJI_408:
+            elif ca_h(t.hour) == "16" and message.content == EMOJI_408:
                 await react(message, timestamp, LIST_408)
-            elif pdt_h(t.hour) == "18" and message.content == EMOJI_625:
+            elif ca_h(t.hour) == "18" and message.content == EMOJI_625:
                 await react(message, timestamp, LIST_625)
             else:
                 await react(message, timestamp)
@@ -658,7 +659,7 @@ async def on_ready() -> None:
     """
     global CHANNEL_408
     print(f"{bot.user} is now online!\ntime: " +
-          datetime.datetime.now(PDT).strftime('%m-%d %H:%M:%S'))
+          datetime.datetime.now(CA_TZ).strftime('%m-%d %H:%M:%S'))
     if not send_408.is_running():
         send_408.start()
         print("started 408")
