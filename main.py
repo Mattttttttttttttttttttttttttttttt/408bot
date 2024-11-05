@@ -30,7 +30,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 PDT = timezone(timedelta(hours=-7))
 PST = timezone(timedelta(hours=-8))
 CST = timezone(timedelta(hours=-6))
-CA_TZ = PST
+CA_TZ = PST # time zone specific
 CA_408 = datetime.time(16, 7, 0, tzinfo=CA_TZ)
 CA_409 = datetime.time(16, 9, 0, tzinfo=CA_TZ)
 CST_408 = datetime.time(16, 7, 0, tzinfo=CST)
@@ -44,19 +44,19 @@ TEST_SERVER_ID = 1240098098513055776
 WCB_ID = 1204222579498557440
 DEVELOPER = 1104220935973777459
 LIST_408 = [16, 8]
-LIST_HRISHU = [15, 8]
+LIST_HRISHU = [14, 8] # time zone specific
 LIST_625 = [18, 25]
 
 # variables
 medal: int
-users: list = [] #[message.author.id, ms]
+users: list = [] # [message.author.id, ms]
 need_to_react: list = []
-records_408: list = [] #one element = [user id, ms, lb id]
+records_408: list = [] # one element = [user id, ms, lb id]
 records_625: list = []
 last_vc_ping: datetime.datetime = datetime.datetime(2000, 1, 1, tzinfo=timezone.utc)
 UTC_TO_PDT: int = -7
 UTC_TO_PST: int = -8
-UTC_TO_CA : int = UTC_TO_PST
+UTC_TO_CA : int = UTC_TO_PST # time zone specific
 EMOJI_408 = "<:408:1232116288113999953>"
 ROLE_408 = "<@&1233927005477797901>"
 EMOJI_625 = "<:625:1246228026006442077>"
@@ -278,8 +278,8 @@ async def send_leaderboard(timestamp: str, hrishu: bool) -> None:
     """sends a specific leaderboard to #408
 
     Args:
-        timestamp (str): a timestamp indicating which leaderboard to send (308, 408, 625)
-        hrishu (bool): whether it's 308, which doesn't not have data leaderboard
+        timestamp (str): a timestamp indicating which leaderboard to send (hrishu, 408, 625)
+        hrishu (bool): whether it's hrishu, which doesn't not have data leaderboard
     """
     # users = [[user id, time in ms], ...]
     global users
@@ -559,7 +559,7 @@ async def sync(inter: discord.Interaction) -> None:
 # BOT EVENTS
 # sends hrishu leaderboard
 @tasks.loop(time=CST_409)
-async def leaderboard_308() -> None:
+async def leaderboard_hrishu() -> None:
     """sends hrishu 408 leaderboard
     """
     await bot.wait_until_ready()
@@ -637,11 +637,11 @@ async def on_message(message: discord.Message) -> None:
             timestamp = [ca_hm(str(t.hour) + ":" + str(t.minute)),
                          t.second * 1000 + round(t.microsecond / 1000)]
             print(f"a {text} emoji was sent at {timestamp[0]}:{s_ms(timestamp[1])}")
-            if ca_h(t.hour) == "15" and message.content == EMOJI_408:
+            if ca_h(t.hour) == str(LIST_HRISHU[0]) and message.content == EMOJI_408:
                 await react(message, timestamp, LIST_HRISHU)
-            elif ca_h(t.hour) == "16" and message.content == EMOJI_408:
+            elif ca_h(t.hour) == str(LIST_408[0]) and message.content == EMOJI_408:
                 await react(message, timestamp, LIST_408)
-            elif ca_h(t.hour) == "18" and message.content == EMOJI_625:
+            elif ca_h(t.hour) == str(LIST_625[0]) and message.content == EMOJI_625:
                 await react(message, timestamp, LIST_625)
             else:
                 await react(message, timestamp)
@@ -669,8 +669,8 @@ async def on_ready() -> None:
     if not send_625.is_running():
         send_625.start()
         print("started 625")
-    if not leaderboard_308.is_running():
-        leaderboard_308.start()
+    if not leaderboard_hrishu.is_running():
+        leaderboard_hrishu.start()
         print("started leaderboard hrishu 408")
     if not leaderboard_408.is_running():
         leaderboard_408.start()
