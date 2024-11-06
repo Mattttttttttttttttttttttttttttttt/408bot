@@ -299,7 +299,6 @@ bruh not a single person did {timestamp} today''')
             for [user, t] in users:
                 await update(user, [t, msg.id], timestamp) #updates record
             await update_file() #updates the file
-        users = []
 
 
 async def update(author: int, speed: list, time: str) -> None:
@@ -589,7 +588,8 @@ async def leaderboard_625() -> None:
 async def send_408() -> None:
     """sends 408 ping
     """
-    global medal
+    global medal, users
+    users = []
     await bot.wait_until_ready()
     medal = 0
     await CHANNEL_408.send(ROLE_408)
@@ -603,7 +603,8 @@ async def send_hrishu() -> None:
     """sends hrishu 408 ping
     """
     await bot.wait_until_ready()
-    global medal
+    global medal, users
+    users = []
     medal = 0
     await CHANNEL_408.send("<@1124542462682218600>")
     await CHANNEL_408.send("get ready hrishu")
@@ -616,7 +617,8 @@ async def send_625() -> None:
     """sends 625 ping
     """
     await bot.wait_until_ready()
-    global medal
+    global medal, users
+    users = []
     medal = 0
     await CHANNEL_408.send(ROLE_625)
     await CHANNEL_408.send("get ready guys")
