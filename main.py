@@ -30,7 +30,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 PDT = timezone(timedelta(hours=-7))
 PST = timezone(timedelta(hours=-8))
 CST = timezone(timedelta(hours=-6))
-CA_TZ = PST # time zone specific
+CA_TZ = PDT # time zone specific
 CA_408 = datetime.time(16, 7, 0, tzinfo=CA_TZ)
 CA_409 = datetime.time(16, 9, 0, tzinfo=CA_TZ)
 CST_408 = datetime.time(16, 7, 0, tzinfo=CST)
@@ -44,7 +44,7 @@ TEST_SERVER_ID = 1240098098513055776
 WCB_ID = 1204222579498557440
 DEVELOPER = 1104220935973777459
 LIST_408 = [16, 8]
-LIST_HRISHU = [14, 8] # time zone specific
+LIST_HRISHU = [15, 8] # time zone specific
 LIST_625 = [18, 25]
 
 # variables
@@ -56,7 +56,7 @@ records_625: list = []
 last_vc_ping: datetime.datetime = datetime.datetime(2000, 1, 1, tzinfo=timezone.utc)
 UTC_TO_PDT: int = -7
 UTC_TO_PST: int = -8
-UTC_TO_CA : int = UTC_TO_PST # time zone specific
+UTC_TO_CA : int = UTC_TO_PDT # time zone specific
 EMOJI_408 = "<:408:1232116288113999953>"
 ROLE_408 = "<@&1233927005477797901>"
 EMOJI_625 = "<:625:1246228026006442077>"
