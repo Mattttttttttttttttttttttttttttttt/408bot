@@ -37,11 +37,11 @@ CST_408 = datetime.time(16, 7, 0, tzinfo=CST)
 CST_409 = datetime.time(16, 9, 0, tzinfo=CST)
 CA_625 = datetime.time(18, 24, 0, tzinfo=CA_TZ)
 CA_626 = datetime.time(18, 26, 0, tzinfo=CA_TZ)
-CHANNEL_408_ID = 1231756043810508822
+CHANNEL_408_ID = 1393645129830764605
 CHANNEL_408: discord.TextChannel
 CHANNEL_SUGGESTIONS = 1294100441721737287
 TEST_SERVER_ID = 1240098098513055776
-WCB_ID = 1204222579498557440
+SERVER408_ID = 1127662995493883984
 DEVELOPER = 1104220935973777459
 LIST_408 = [16, 8]
 LIST_HRISHU = [15, 8] # time zone specific
@@ -57,10 +57,14 @@ last_vc_ping: datetime.datetime = datetime.datetime(2000, 1, 1, tzinfo=timezone.
 UTC_TO_PDT: int = -7
 UTC_TO_PST: int = -8
 UTC_TO_CA : int = UTC_TO_PDT # time zone specific
-EMOJI_408 = "<:408:1232116288113999953>"
-ROLE_408 = "<@&1233927005477797901>"
-EMOJI_625 = "<:625:1246228026006442077>"
-ROLE_625 = "<@&1246226716100268124>"
+# EMOJI_408 = "<:408:1232116288113999953>"
+EMOJI_408 = "408"
+# ROLE_408 = "<@&1233927005477797901>"
+ROLE_408 = "<@816731205524258847> <@1104220935973777459>"
+# EMOJI_625 = "<:625:1246228026006442077>"
+EMOJI_625 = "625"
+# ROLE_625 = "<@&1246226716100268124>"
+ROLE_625 = "<@816731205524258847> <@1104220935973777459>"
 VC_PING = "<@&1204276473150578698>"
 RANKING_TO_EMOJI = {
     1: "🥇",
@@ -397,7 +401,7 @@ async def get_user_time_records(records: list) -> str:
         for i, data in enumerate(records):
             #key = user id, val = time in ms, id = id to leaderboard sent
             msg = await CHANNEL_408.fetch_message(data[2])
-            msg = f"https://discord.com/channels/{WCB_ID}/{CHANNEL_408_ID}/{msg.id}"
+            msg = f"https://discord.com/channels/{SERVER408_ID}/{CHANNEL_408_ID}/{msg.id}"
             record.append(f"{i + 1}. [{s_ms(data[1])}]({msg})")
             #e.g. 1. 0ms: @matt
         return "\n".join(record)
@@ -421,7 +425,7 @@ async def get_time_records(records: list) -> str:
         for i, [key, val, msg] in enumerate(records):
             #key = user id, val = time in ms, id = id to leaderboard sent
             msg = await CHANNEL_408.fetch_message(msg)
-            msg = f"https://discord.com/channels/{WCB_ID}/{CHANNEL_408_ID}/{msg.id}"
+            msg = f"https://discord.com/channels/{SERVER408_ID}/{CHANNEL_408_ID}/{msg.id}"
             record.append(f"{i + 1}. [{s_ms(val)}]({msg}): <@{key}>")
             #e.g. 1. 0ms: @matt
         return "\n".join(record)
@@ -539,7 +543,7 @@ async def vote(inter: discord.Interaction, message: discord.Message) -> None:
 
 @bot.tree.command(name="sync", description="Owner only")
 @app_commands.default_permissions()
-@app_commands.guilds(WCB_ID)
+@app_commands.guilds(SERVER408_ID)
 async def sync(inter: discord.Interaction) -> None:
     """sync all the other functions
 
@@ -557,12 +561,12 @@ async def sync(inter: discord.Interaction) -> None:
 
 # BOT EVENTS
 # sends hrishu leaderboard
-@tasks.loop(time=CST_409)
-async def leaderboard_hrishu() -> None:
-    """sends hrishu 408 leaderboard
-    """
-    await bot.wait_until_ready()
-    await send_leaderboard("hrishu 408", True)
+# @tasks.loop(time=CST_409)
+# async def leaderboard_hrishu() -> None:
+#     """sends hrishu 408 leaderboard
+#     """
+#     await bot.wait_until_ready()
+#     await send_leaderboard("hrishu 408", True)
 
 
 # sends 408 leaderboard
@@ -598,17 +602,17 @@ async def send_408() -> None:
 
 
 # pings @408 ping at 4:08pm CST
-@tasks.loop(time=CST_408)
-async def send_hrishu() -> None:
-    """sends hrishu 408 ping
-    """
-    await bot.wait_until_ready()
-    global medal, users
-    users = []
-    medal = 0
-    await CHANNEL_408.send("<@1124542462682218600>")
-    await CHANNEL_408.send("get ready hrishu")
-    print("sent hrishu ping at " + datetime.datetime.now(CA_TZ).strftime('%m-%d %H:%M:%S'))
+# @tasks.loop(time=CST_408)
+# async def send_hrishu() -> None:
+#     """sends hrishu 408 ping
+#     """
+#     await bot.wait_until_ready()
+#     global medal, users
+#     users = []
+#     medal = 0
+#     await CHANNEL_408.send("<@1124542462682218600>")
+#     await CHANNEL_408.send("get ready hrishu")
+#     print("sent hrishu ping at " + datetime.datetime.now(CA_TZ).strftime('%m-%d %H:%M:%S'))
 
 
 # pings @408 ping at 4:08pm CST
@@ -665,22 +669,22 @@ async def on_ready() -> None:
     if not send_408.is_running():
         send_408.start()
         print("started 408")
-    if not send_hrishu.is_running():
-        send_hrishu.start()
-        print("started hrishu")
+    # if not send_hrishu.is_running():
+    #     send_hrishu.start()
+    #     print("started hrishu")
     if not send_625.is_running():
         send_625.start()
         print("started 625")
-    if not leaderboard_hrishu.is_running():
-        leaderboard_hrishu.start()
-        print("started leaderboard hrishu 408")
+    # if not leaderboard_hrishu.is_running():
+    #     leaderboard_hrishu.start()
+    #     print("started leaderboard hrishu 408")
     if not leaderboard_408.is_running():
         leaderboard_408.start()
         print("started leaderboard 408")
     if not leaderboard_625.is_running():
         leaderboard_625.start()
         print("started leaderboard 625")
-    synced = await bot.tree.sync(guild=bot.get_guild(WCB_ID))
+    synced = await bot.tree.sync(guild=bot.get_guild(SERVER408_ID))
     print(f"synced command {[synced[i].name for i in range(len(synced))]}")
     file = shelve.open("data")
     if "408" in list(file.keys()):
