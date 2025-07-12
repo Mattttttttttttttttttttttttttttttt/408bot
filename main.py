@@ -462,7 +462,7 @@ async def feeddata(inter: discord.Interaction, data: str, overwrite: bool) -> No
 
     Args:
         inter (discord.Interaction): default parameter
-        data (str): the data in the format of "408 a(user id) (ms) (leaderboard message id) 625 ..."
+        data (str): the data in the format of "*408* a(user id) (ms) (leaderboard message id) *625* ..."
         overwrite (bool): whether to overwrite the original data
     """
     await inter.response.defer(ephemeral=True)
