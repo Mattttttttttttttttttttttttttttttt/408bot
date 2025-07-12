@@ -1,2 +1,2 @@
 # 408bot
-This is a bot for the west champ boys!!! WCB forever :D
+a bot by the panda for the kitties :3
