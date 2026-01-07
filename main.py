@@ -657,56 +657,56 @@ async def sync(inter: discord.Interaction) -> None:
 #             await message.add_reaction("❌")
 #             print(f"\"{message.content}\" suggestion received")
 
-@bot.event
-async def on_member_join(member: discord.Member):
-    """bans member if spam
+# @bot.event
+# async def on_member_join(member: discord.Member):
+#     """bans member if spam
 
-    Args:
-        member (_type_): discord member
-    """
-    await asyncio.sleep(600)
-    # if they already left or were banned by something else, abort
-    if member not in member.guild.members:
-        return
+#     Args:
+#         member (_type_): discord member
+#     """
+#     await asyncio.sleep(600)
+#     # if they already left or were banned by something else, abort
+#     if member not in member.guild.members:
+#         return
 
-    guild = member.guild
+#     guild = member.guild
 
-    # check if its skewb role
-    skewb_list = [1211815503190949988, 1211815734917988383, 1211815935933947975,
-             1211816107078590514, 1211816097322500207, 1211816103794315348,
-             1211816101303033897]
-    verified = 1271862185957527563
-    roles = member.roles
-    del roles[0]
-    for r in roles:
-        if r.id == verified:
-            roles.remove(r)
-            break
-    # down to whatever other role they selected
-    skewb = len(roles) == 0 or (len(roles) == 1 and roles[0].id in skewb_list)
-    if skewb:
-        verified_role = guild.get_role(verified)
-        await member.remove_roles(verified_role)
+#     # check if its skewb role
+#     skewb_list = [1211815503190949988, 1211815734917988383, 1211815935933947975,
+#              1211816107078590514, 1211816097322500207, 1211816103794315348,
+#              1211816101303033897]
+#     verified = 1271862185957527563
+#     roles = member.roles
+#     del roles[0]
+#     for r in roles:
+#         if r.id == verified:
+#             roles.remove(r)
+#             break
+#     # down to whatever other role they selected
+#     skewb = len(roles) == 0 or (len(roles) == 1 and roles[0].id in skewb_list)
+#     if skewb:
+#         verified_role = guild.get_role(verified)
+#         await member.remove_roles(verified_role)
 
-    # scan all text channels in the guild
-    sent_count = 0
-    for channel in guild.text_channels:
-        # bot must have Read Message History in this channel
-        try:
-            async for msg in channel.history(oldest_first=False, after=member.joined_at):
-                if msg.author.id != member.id:
-                    continue
-                sent_count += 1
-                break
-        except discord.Forbidden:
-            # no permission to read this channel, skip
-            continue
-        if sent_count > 1: # discord auto sents one message for welcome
-            break
+#     # scan all text channels in the guild
+#     sent_count = 0
+#     for channel in guild.text_channels:
+#         # bot must have Read Message History in this channel
+#         try:
+#             async for msg in channel.history(oldest_first=False, after=member.joined_at):
+#                 if msg.author.id != member.id:
+#                     continue
+#                 sent_count += 1
+#                 break
+#         except discord.Forbidden:
+#             # no permission to read this channel, skip
+#             continue
+#         if sent_count > 1: # discord auto sents one message for welcome
+#             break
 
-    sent_smth = sent_count > 1
-    if not sent_smth and skewb:
-        await member.ban(reason = "suspicious account")
+#     sent_smth = sent_count > 1
+#     if not sent_smth and skewb:
+#         await member.ban(reason = "suspicious account")
 
 # starts the bot
 @bot.event
