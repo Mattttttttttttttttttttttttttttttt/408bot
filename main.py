@@ -558,6 +558,93 @@ async def sync(inter: discord.Interaction) -> None:
     else:
         await inter.edit_original_response(content="hmm i dont think you are matt bro")
 
+@bot.tree.command(name="purgerange", description="Purge all messages between two message IDs (inclusive)")
+@app_commands.describe(
+    message_a="First message ID",
+    message_b="Second message ID"
+)
+async def purgerange(interaction: discord.Interaction, message_a: str, message_b: str):
+    """Purge all messages between two message IDs (inclusive).
+
+    Args:
+        interaction (discord.Interaction): default parameter
+        message_a (str): the first message ID
+        message_b (str): the second message ID
+    """
+    # Permission check: admin only
+    if not interaction.guild or not isinstance(interaction.user, discord.Member):
+        return await interaction.response.send_message(
+            "This command can only be used inside a server.",
+            ephemeral=True
+        )
+
+    # Admin permission check
+    if not interaction.user.guild_permissions.administrator:
+        return await interaction.response.send_message(
+            "You must be an administrator to use this command.",
+            ephemeral=True
+        )
+
+    channel: discord.TextChannel = interaction.channel
+
+    await interaction.response.defer(ephemeral=True)
+
+    # Fetch the messages
+    try:
+        msg_a = await channel.fetch_message(int(message_a))
+        msg_b = await channel.fetch_message(int(message_b))
+    except discord.NotFound:
+        return await interaction.followup.send(
+            "One or both message IDs could not be found in this channel."
+        )
+    except discord.HTTPException:
+        return await interaction.followup.send("Failed to fetch messages due to an HTTP error.")
+
+    # Determine ordering
+    first = msg_a if msg_a.created_at < msg_b.created_at else msg_b
+    last = msg_b if first is msg_a else msg_a
+
+    messages_to_delete = [first]
+
+    async for msg in channel.history(limit=None, after=first.created_at):
+        if msg.created_at > last.created_at:
+            break
+        messages_to_delete.append(msg)
+
+    # Deduplicate
+    messages_to_delete = list({m.id: m for m in messages_to_delete}.values())
+
+    # Bulk deletable (younger than 14 days)
+    bulk = [
+        m for m in messages_to_delete
+        if (discord.utils.utcnow() - m.created_at).total_seconds() < 14 * 86400
+    ]
+
+    # Bulk delete in chunks
+    for i in range(0, len(bulk), 100):
+        chunk = bulk[i:i+100]
+        try:
+            await channel.delete_messages(chunk)
+        except discord.HTTPException:
+            for m in chunk:
+                try:
+                    await m.delete()
+                except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                    pass
+
+    # Delete older messages individually
+    older = [m for m in messages_to_delete if m not in bulk]
+    for m in older:
+        try:
+            await m.delete()
+            await asyncio.sleep(0.35)  # stays under delete rate limit
+        except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+            pass
+
+    await interaction.followup.send(
+        f"Deleted {len(messages_to_delete)} messages between {first.id} and {last.id}.",
+        ephemeral=True
+    )
 
 # BOT EVENTS
 # sends hrishu leaderboard
